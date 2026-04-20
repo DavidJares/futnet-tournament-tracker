@@ -42,6 +42,10 @@ $router->post('/admin/tournament/teams/delete', [$tournamentController, 'deleteT
 $router->post('/admin/tournament/teams/assign', [$tournamentController, 'assignTeamGroup']);
 $router->post('/admin/tournament/teams/assign-auto', [$tournamentController, 'autoAssignTeams']);
 $router->post('/admin/tournament/matches/generate', [$tournamentController, 'generateGroupMatches']);
+$router->get('/admin/tournament/matches/{matchId}', [$tournamentController, 'groupMatchDetail']);
+$router->post('/admin/tournament/matches/{matchId}/start', [$tournamentController, 'startGroupMatch']);
+$router->post('/admin/tournament/matches/{matchId}/score', [$tournamentController, 'saveGroupMatchScore']);
+$router->post('/admin/tournament/matches/{matchId}/reset', [$tournamentController, 'resetGroupMatchResult']);
 
 $router->get('/tournament/{slug}/login', [$tournamentAdminAuthController, 'loginForm']);
 $router->post('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login']);
@@ -55,6 +59,10 @@ $router->post('/tournament/{slug}/admin/teams/delete', [$tournamentController, '
 $router->post('/tournament/{slug}/admin/teams/assign', [$tournamentController, 'assignTeamGroupBySlug']);
 $router->post('/tournament/{slug}/admin/teams/assign-auto', [$tournamentController, 'autoAssignTeamsBySlug']);
 $router->post('/tournament/{slug}/admin/matches/generate', [$tournamentController, 'generateGroupMatchesBySlug']);
+$router->get('/tournament/{slug}/admin/matches/{matchId}', [$tournamentController, 'groupMatchDetailBySlug']);
+$router->post('/tournament/{slug}/admin/matches/{matchId}/start', [$tournamentController, 'startGroupMatchBySlug']);
+$router->post('/tournament/{slug}/admin/matches/{matchId}/score', [$tournamentController, 'saveGroupMatchScoreBySlug']);
+$router->post('/tournament/{slug}/admin/matches/{matchId}/reset', [$tournamentController, 'resetGroupMatchResultBySlug']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

@@ -14,6 +14,7 @@ declare(strict_types=1);
  * } $groupAssignment */
 /** @var string $assignTeamActionUrl */
 /** @var string $autoAssignTeamsActionUrl */
+/** @var array<int, list<array<string, int|string>>> $groupStandingsByGroup */
 
 $tournamentId = (int) ($tournament['id'] ?? 0);
 ?>
@@ -67,9 +68,50 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
                         <strong>Group <?= htmlspecialchars($groupName, ENT_QUOTES, 'UTF-8') ?></strong>
                         <span class="badge text-bg-secondary"><?= $teamCount ?> teams</span>
                     </div>
-                    <?php if (count($groupTeams) === 0): ?>
-                        <p class="text-muted small mb-0">No teams assigned.</p>
-                    <?php endif; ?>
+                    <?php $standingsRows = $groupStandingsByGroup[$groupId] ?? []; ?>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-striped align-middle mb-0">
+                            <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Team</th>
+                                <th>MP</th>
+                                <th>W</th>
+                                <th>D</th>
+                                <th>L</th>
+                                <th>SF</th>
+                                <th>SA</th>
+                                <th>PF</th>
+                                <th>PA</th>
+                                <th>+/-</th>
+                                <th>Pts</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <?php if (count($standingsRows) === 0): ?>
+                                <tr>
+                                    <td colspan="12" class="text-muted">No teams assigned.</td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php foreach ($standingsRows as $row): ?>
+                                <tr>
+                                    <td><?= (int) ($row['position'] ?? 0) ?></td>
+                                    <td><?= htmlspecialchars((string) ($row['team_name'] ?? ''), ENT_QUOTES, 'UTF-8') ?></td>
+                                    <td><?= (int) ($row['played'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['wins'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['draws'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['losses'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['sets_for'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['sets_against'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['points_for'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['points_against'] ?? 0) ?></td>
+                                    <td><?= (int) ($row['point_diff'] ?? 0) ?></td>
+                                    <td><strong><?= (int) ($row['tournament_points'] ?? 0) ?></strong></td>
+                                </tr>
+                            <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
                     <div class="d-flex flex-column gap-2">
                         <?php foreach ($groupTeams as $team): ?>
                             <?php $teamId = (int) ($team['id'] ?? 0); ?>

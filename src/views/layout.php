@@ -34,6 +34,7 @@ if ($flashType === 'error') {
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
     <div class="container-fluid">
         <a class="navbar-brand" href="<?= htmlspecialchars($brandHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></a>
+        <div id="js-header-clock" class="text-light small fw-semibold mx-auto" aria-label="Current time">--:--</div>
         <div class="d-flex align-items-center gap-2 ms-auto">
             <?php if (is_array($currentSuperadmin ?? null)): ?>
                 <span class="text-light small"><?= htmlspecialchars((string) $currentSuperadmin['username'], ENT_QUOTES, 'UTF-8') ?></span>
@@ -61,5 +62,25 @@ if ($flashType === 'error') {
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+<script>
+    (function () {
+        var clock = document.getElementById('js-header-clock');
+        if (!clock) {
+            return;
+        }
+
+        function pad(value) {
+            return value < 10 ? '0' + value : String(value);
+        }
+
+        function renderClock() {
+            var now = new Date();
+            clock.textContent = pad(now.getHours()) + ':' + pad(now.getMinutes());
+        }
+
+        renderClock();
+        setInterval(renderClock, 1000);
+    })();
+</script>
 </body>
 </html>

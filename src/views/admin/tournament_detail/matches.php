@@ -38,6 +38,18 @@ $courtBadgeClasses = [
     'text-bg-dark',
 ];
 ?>
+<style>
+    .match-winner-name {
+        font-weight: 600;
+        color: #3a7f5a;
+    }
+
+    .match-winner-badge {
+        font-size: 0.65rem;
+        font-weight: 500;
+        line-height: 1;
+    }
+</style>
 <div class="card shadow-sm mb-3">
     <div class="card-body">
         <p class="text-muted small mb-2">
@@ -118,9 +130,11 @@ $courtBadgeClasses = [
                         <th>Group</th>
                         <th>Team A</th>
                         <th>Team B</th>
+                        <th>Result</th>
                         <th>Court</th>
                         <th>Planned start</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -136,15 +150,55 @@ $courtBadgeClasses = [
                         if ($plannedStartRaw !== '') {
                             $dateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $plannedStartRaw);
                             if ($dateTime instanceof \DateTimeImmutable) {
-                                $plannedStart = $dateTime->format('Y-m-d H:i');
+                                $plannedStart = $dateTime->format('H:i');
                             }
                         }
+                        $status = (string) ($match['status'] ?? 'pending');
+                        $statusClass = 'text-bg-secondary';
+                        if ($status === 'scheduled') {
+                            $statusClass = 'text-bg-primary';
+                        } elseif ($status === 'in_progress') {
+                            $statusClass = 'text-bg-warning';
+                        } elseif ($status === 'finished') {
+                            $statusClass = 'text-bg-success';
+                        }
+                        $setsSummaryA = (int) ($match['sets_summary_a'] ?? 0);
+                        $setsSummaryB = (int) ($match['sets_summary_b'] ?? 0);
+                        $resultSummary = $status === 'finished' ? ($setsSummaryA . ':' . $setsSummaryB) : '-';
+                        $setScoresSummary = trim((string) ($match['set_scores_summary'] ?? ''));
+                        $winnerTeamId = (int) ($match['winner_team_id'] ?? 0);
+                        $isDrawResult = $status === 'finished' && $setsSummaryA === $setsSummaryB;
+                        $isWinnerA = $status === 'finished' && !$isDrawResult && $winnerTeamId > 0 && $winnerTeamId === (int) ($match['team_a_id'] ?? 0);
+                        $isWinnerB = $status === 'finished' && !$isDrawResult && $winnerTeamId > 0 && $winnerTeamId === (int) ($match['team_b_id'] ?? 0);
+                        $teamANameClass = $isWinnerA ? 'match-winner-name' : '';
+                        $teamBNameClass = $isWinnerB ? 'match-winner-name' : '';
                         ?>
-                        <tr>
+                        <?php $detailUrl = (string) ($match['detail_url'] ?? ''); ?>
+                        <tr<?= $detailUrl !== '' ? ' class="js-match-row" data-href="' . htmlspecialchars($detailUrl, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
                             <td><?= (int) ($match['schedule_order'] ?? 0) ?></td>
                             <td><?= htmlspecialchars((string) ($match['group_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string) ($match['team_a_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><?= htmlspecialchars((string) ($match['team_b_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
+                            <td>
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <span class="<?= htmlspecialchars($teamANameClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) ($match['team_a_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></span>
+                                    <?php if ($isWinnerA): ?>
+                                        <span class="badge text-bg-light border text-secondary match-winner-badge">W</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-inline-flex align-items-center gap-1">
+                                    <span class="<?= htmlspecialchars($teamBNameClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) ($match['team_b_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></span>
+                                    <?php if ($isWinnerB): ?>
+                                        <span class="badge text-bg-light border text-secondary match-winner-badge">W</span>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <div><?= htmlspecialchars($resultSummary, ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php if ($status === 'finished' && $setScoresSummary !== ''): ?>
+                                    <div class="small text-muted">(<?= htmlspecialchars($setScoresSummary, ENT_QUOTES, 'UTF-8') ?>)</div>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <?php if ($courtNumber > 0): ?>
                                     <span class="badge <?= htmlspecialchars($badgeClass, ENT_QUOTES, 'UTF-8') ?>">Court <?= $courtNumber ?></span>
@@ -153,12 +207,39 @@ $courtBadgeClasses = [
                                 <?php endif; ?>
                             </td>
                             <td><?= htmlspecialchars($plannedStart !== '' ? $plannedStart : '-', ENT_QUOTES, 'UTF-8') ?></td>
-                            <td><span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($match['status'] ?? 'pending'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                            <td><span class="badge <?= htmlspecialchars($statusClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></span></td>
+                            <td>
+                                <?php if ($status === 'scheduled'): ?>
+                                    <form method="post" action="<?= htmlspecialchars((string) ($match['start_action_url'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" class="m-0 js-match-action">
+                                        <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
+                                        <input type="hidden" name="group_id" value="<?= $selectedGroupFilter ?>">
+                                        <input type="hidden" name="court" value="<?= $selectedCourtFilter ?>">
+                                        <input type="hidden" name="return_to" value="matches">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Start</button>
+                                    </form>
+                                <?php else: ?>
+                                    <span class="text-muted small">-</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
+            <script>
+                document.querySelectorAll('.js-match-row').forEach(function (row) {
+                    row.style.cursor = 'pointer';
+                    row.addEventListener('click', function (event) {
+                        if (event.target.closest('.js-match-action')) {
+                            return;
+                        }
+                        var href = row.getAttribute('data-href');
+                        if (href) {
+                            window.location.href = href;
+                        }
+                    });
+                });
+            </script>
         <?php endif; ?>
     </div>
 </div>

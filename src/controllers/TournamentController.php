@@ -247,6 +247,160 @@ final class TournamentController extends BaseController
         $this->handleGenerateGroupMatches($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
+    public function groupMatchDetail(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $tournament = $this->resolveTournamentByQueryForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->superadminSectionRedirectPath((int) $tournament['id'], 'matches'));
+        }
+
+        $filters = $this->filtersFromGet();
+        $this->renderGroupMatchDetail($tournament, $matchId, false, $filters);
+    }
+
+    public function groupMatchDetailBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches'));
+        }
+
+        $filters = $this->filtersFromGet();
+        $this->renderGroupMatchDetail($tournament, $matchId, true, $filters);
+    }
+
+    public function startGroupMatch(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        $filters = $this->filtersFromPost();
+        $redirectPath = $this->shouldReturnToMatches()
+            ? '/admin/tournament/matches' . $this->querySuffix(array_merge(['id' => (int) $tournament['id']], $filters))
+            : $this->superadminMatchDetailPath((int) $tournament['id'], $matchId, $filters);
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect('/admin/tournament/matches' . $this->querySuffix(array_merge(['id' => (int) $tournament['id']], $filters)));
+        }
+
+        $this->handleStartGroupMatch($tournament, $matchId, $redirectPath);
+    }
+
+    public function startGroupMatchBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        $filters = $this->filtersFromPost();
+        $redirectPath = $this->shouldReturnToMatches()
+            ? $this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches') . $this->querySuffix($filters)
+            : $this->tournamentAdminMatchDetailPath((string) $tournament['slug'], $matchId, $filters);
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches') . $this->querySuffix($filters));
+        }
+
+        $this->handleStartGroupMatch($tournament, $matchId, $redirectPath);
+    }
+
+    public function saveGroupMatchScore(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        $filters = $this->filtersFromPost();
+        $redirectPath = $this->superadminMatchDetailPath((int) $tournament['id'], $matchId, $filters);
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->superadminSectionRedirectPath((int) $tournament['id'], 'matches'));
+        }
+
+        $this->handleSaveGroupMatchScore($tournament, $matchId, $redirectPath);
+    }
+
+    public function saveGroupMatchScoreBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        $filters = $this->filtersFromPost();
+        $redirectPath = $this->tournamentAdminMatchDetailPath((string) $tournament['slug'], $matchId, $filters);
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches'));
+        }
+
+        $this->handleSaveGroupMatchScore($tournament, $matchId, $redirectPath);
+    }
+
+    public function resetGroupMatchResult(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        $filters = $this->filtersFromPost();
+        $redirectPath = $this->superadminMatchDetailPath((int) $tournament['id'], $matchId, $filters);
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect('/admin/tournament/matches' . $this->querySuffix(array_merge(['id' => (int) $tournament['id']], $filters)));
+        }
+
+        $this->handleResetGroupMatchResult($tournament, $matchId, $redirectPath);
+    }
+
+    public function resetGroupMatchResultBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        $filters = $this->filtersFromPost();
+        $redirectPath = $this->tournamentAdminMatchDetailPath((string) $tournament['slug'], $matchId, $filters);
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches') . $this->querySuffix($filters));
+        }
+
+        $this->handleResetGroupMatchResult($tournament, $matchId, $redirectPath);
+    }
+
     /**
      * @param array<string, mixed> $tournament
      */
@@ -262,6 +416,22 @@ final class TournamentController extends BaseController
         $teams = $teamModel->allByTournament($tournamentId);
         $groupAssignment = $this->buildGroupAssignmentViewData($groups, $teams);
         $groupMatches = $matchModel->groupMatchesForTournament($tournamentId);
+        $finishedGroupMatches = $matchModel->finishedGroupMatchesForTournament($tournamentId);
+        $finishedMatchIds = array_values(array_filter(
+            array_map(
+                static fn (array $match): int => (int) ($match['id'] ?? 0),
+                $finishedGroupMatches
+            ),
+            static fn (int $id): bool => $id > 0
+        ));
+        $setsByMatchId = $matchModel->setsForMatches($finishedMatchIds);
+        $groupStandingsByGroup = $this->buildGroupStandings(
+            $groups,
+            $teams,
+            $finishedGroupMatches,
+            $setsByMatchId,
+            (string) ($tournament['match_mode'] ?? '')
+        );
         $hasGroupMatches = count($groupMatches) > 0;
 
         $isSlugContext = $context === 'tournament_admin';
@@ -327,12 +497,37 @@ final class TournamentController extends BaseController
             }
         ));
 
+        $activeFilters = [];
+        if ($selectedGroupFilter > 0) {
+            $activeFilters['group_id'] = $selectedGroupFilter;
+        }
+        if ($selectedCourtFilter > 0) {
+            $activeFilters['court'] = $selectedCourtFilter;
+        }
+        foreach ($filteredGroupMatches as &$match) {
+            $matchId = (int) ($match['id'] ?? 0);
+            if ($matchId <= 0) {
+                continue;
+            }
+
+            $path = $isSlugContext
+                ? $this->tournamentAdminMatchDetailPath($tournamentSlug, $matchId, $activeFilters)
+                : $this->superadminMatchDetailPath($tournamentId, $matchId, $activeFilters);
+            $match['detail_url'] = $this->url($path);
+            $startPath = $isSlugContext
+                ? '/tournament/' . $tournamentSlug . '/admin/matches/' . $matchId . '/start'
+                : '/admin/tournament/matches/' . $matchId . '/start';
+            $match['start_action_url'] = $this->url($startPath);
+        }
+        unset($match);
+
         $this->render('admin/tournament_detail', [
             'title' => 'Tournament detail',
             'tournament' => $tournament,
             'groups' => $groups,
             'teams' => $teams,
             'groupAssignment' => $groupAssignment,
+            'groupStandingsByGroup' => $groupStandingsByGroup,
             'groupMatches' => $filteredGroupMatches,
             'groupMatchesTotalCount' => count($groupMatches),
             'hasGroupMatches' => $hasGroupMatches,
@@ -368,6 +563,152 @@ final class TournamentController extends BaseController
                 ? $this->url('/tournament/' . $tournamentSlug . '/admin/matches/generate')
                 : $this->url('/admin/tournament/matches/generate'),
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     * @param array<string, int> $filters
+     */
+    private function renderGroupMatchDetail(array $tournament, int $matchId, bool $isSlugContext, array $filters): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $tournamentSlug = (string) ($tournament['slug'] ?? '');
+
+        $matchModel = new MatchModel($this->db());
+        $match = $matchModel->findGroupMatchDetailForTournament($tournamentId, $matchId);
+        if ($match === null) {
+            $this->setFlash('error', 'Group-stage match not found.');
+            if ($isSlugContext) {
+                $this->redirect($this->tournamentAdminSectionRedirectPath($tournamentSlug, 'matches') . $this->querySuffix($filters));
+            }
+
+            $this->redirect('/admin/tournament/matches' . $this->querySuffix(array_merge(['id' => $tournamentId], $filters)));
+        }
+
+        $matchSets = $matchModel->setsForMatch($matchId);
+        $backToMatchesPath = $isSlugContext
+            ? $this->tournamentAdminSectionRedirectPath($tournamentSlug, 'matches')
+            : $this->superadminSectionRedirectPath($tournamentId, 'matches');
+        $startActionPath = $isSlugContext
+            ? '/tournament/' . $tournamentSlug . '/admin/matches/' . $matchId . '/start'
+            : '/admin/tournament/matches/' . $matchId . '/start';
+        $scoreActionPath = $isSlugContext
+            ? '/tournament/' . $tournamentSlug . '/admin/matches/' . $matchId . '/score'
+            : '/admin/tournament/matches/' . $matchId . '/score';
+        $resetActionPath = $isSlugContext
+            ? '/tournament/' . $tournamentSlug . '/admin/matches/' . $matchId . '/reset'
+            : '/admin/tournament/matches/' . $matchId . '/reset';
+
+        $this->render('admin/match_detail', [
+            'title' => 'Match detail',
+            'tournament' => $tournament,
+            'match' => $match,
+            'matchSets' => $matchSets,
+            'filters' => $filters,
+            'backToMatchesUrl' => $isSlugContext
+                ? $this->url($backToMatchesPath . $this->querySuffix($filters))
+                : $this->url('/admin/tournament/matches' . $this->querySuffix(array_merge(['id' => $tournamentId], $filters))),
+            'startActionUrl' => $this->url($startActionPath),
+            'scoreActionUrl' => $this->url($scoreActionPath),
+            'resetActionUrl' => $this->url($resetActionPath),
+            'isSlugContext' => $isSlugContext,
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleStartGroupMatch(array $tournament, int $matchId, string $redirectPath): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $matchModel = new MatchModel($this->db());
+        $match = $matchModel->findGroupMatchDetailForTournament($tournamentId, $matchId);
+        if ($match === null) {
+            $this->setFlash('error', 'Group-stage match not found.');
+            $this->redirect($redirectPath);
+        }
+
+        if ((string) ($match['status'] ?? '') !== 'scheduled') {
+            $this->setFlash('error', 'Only scheduled matches can be started.');
+            $this->redirect($redirectPath);
+        }
+
+        if (!$matchModel->markGroupMatchInProgress($tournamentId, $matchId)) {
+            $this->setFlash('error', 'Match could not be started.');
+            $this->redirect($redirectPath);
+        }
+
+        $this->setFlash('success', 'Match status changed to in progress.');
+        $this->redirect($redirectPath);
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleSaveGroupMatchScore(array $tournament, int $matchId, string $redirectPath): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $matchMode = (string) ($tournament['match_mode'] ?? '');
+        $matchModel = new MatchModel($this->db());
+        $match = $matchModel->findGroupMatchDetailForTournament($tournamentId, $matchId);
+        if ($match === null) {
+            $this->setFlash('error', 'Group-stage match not found.');
+            $this->redirect($redirectPath);
+        }
+
+        $status = (string) ($match['status'] ?? '');
+        if (!in_array($status, ['scheduled', 'in_progress', 'finished'], true)) {
+            $this->setFlash('error', 'Only scheduled, in-progress, or finished matches can save score.');
+            $this->redirect($redirectPath);
+        }
+
+        $validated = $this->validateScoreInput($matchMode, (int) ($match['team_a_id'] ?? 0), (int) ($match['team_b_id'] ?? 0));
+        if ($validated === null) {
+            $this->redirect($redirectPath);
+        }
+
+        $saved = $matchModel->saveGroupMatchResult(
+            $tournamentId,
+            $matchId,
+            $validated['sets'],
+            $validated['sets_summary_a'],
+            $validated['sets_summary_b'],
+            $validated['winner_team_id']
+        );
+        if (!$saved) {
+            $this->setFlash('error', 'Match result could not be saved. Check match status and try again.');
+            $this->redirect($redirectPath);
+        }
+
+        $this->setFlash('success', 'Match result saved. Match marked as finished.');
+        $this->redirect($redirectPath);
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleResetGroupMatchResult(array $tournament, int $matchId, string $redirectPath): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $matchModel = new MatchModel($this->db());
+        $match = $matchModel->findGroupMatchDetailForTournament($tournamentId, $matchId);
+        if ($match === null) {
+            $this->setFlash('error', 'Group-stage match not found.');
+            $this->redirect($redirectPath);
+        }
+
+        if ((string) ($match['status'] ?? '') !== 'finished') {
+            $this->setFlash('error', 'Only finished matches can be reset.');
+            $this->redirect($redirectPath);
+        }
+
+        if (!$matchModel->resetGroupMatchResult($tournamentId, $matchId)) {
+            $this->setFlash('error', 'Match result could not be reset.');
+            $this->redirect($redirectPath);
+        }
+
+        $this->setFlash('success', 'Match result reset. Status changed to scheduled.');
+        $this->redirect($redirectPath);
     }
 
     /**
@@ -698,6 +1039,29 @@ final class TournamentController extends BaseController
     /**
      * @return array<string, mixed>|null
      */
+    private function resolveTournamentByQueryForSuperadmin(): ?array
+    {
+        $this->requireSuperadminAuth();
+
+        $tournamentId = $this->requestGetInt('id');
+        if ($tournamentId <= 0) {
+            $this->setFlash('error', 'Invalid tournament selected.');
+            $this->redirect('/admin/dashboard');
+        }
+
+        $tournamentModel = new TournamentModel($this->db());
+        $tournament = $tournamentModel->findById($tournamentId);
+        if ($tournament === null) {
+            $this->setFlash('error', 'Tournament not found.');
+            $this->redirect('/admin/dashboard');
+        }
+
+        return $tournament;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
     private function resolveTournamentByPostForSuperadmin(): ?array
     {
         $tournamentId = (int) $this->requestPostString('tournament_id');
@@ -714,6 +1078,96 @@ final class TournamentController extends BaseController
         }
 
         return $tournament;
+    }
+
+    private function matchIdFromRoute(): int
+    {
+        $matchId = $this->requestRouteString('matchId');
+        if ($matchId === '' || !ctype_digit($matchId)) {
+            return 0;
+        }
+
+        return (int) $matchId;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function filtersFromGet(): array
+    {
+        $filters = [];
+        $groupId = $this->requestGetInt('group_id');
+        $court = $this->requestGetInt('court');
+        if ($groupId > 0) {
+            $filters['group_id'] = $groupId;
+        }
+        if ($court > 0) {
+            $filters['court'] = $court;
+        }
+
+        return $filters;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function filtersFromPost(): array
+    {
+        $filters = [];
+        $groupId = $this->requestPostInt('group_id');
+        $court = $this->requestPostInt('court');
+        if ($groupId > 0) {
+            $filters['group_id'] = $groupId;
+        }
+        if ($court > 0) {
+            $filters['court'] = $court;
+        }
+
+        return $filters;
+    }
+
+    private function requestPostInt(string $key): int
+    {
+        $value = $this->requestPostString($key);
+        if ($value === '' || !ctype_digit($value)) {
+            return 0;
+        }
+
+        return (int) $value;
+    }
+
+    private function shouldReturnToMatches(): bool
+    {
+        return $this->requestPostString('return_to') === 'matches';
+    }
+
+    /**
+     * @param array<string, int> $params
+     */
+    private function querySuffix(array $params): string
+    {
+        if (count($params) === 0) {
+            return '';
+        }
+
+        return '?' . http_build_query($params);
+    }
+
+    /**
+     * @param array<string, int> $filters
+     */
+    private function superadminMatchDetailPath(int $tournamentId, int $matchId, array $filters = []): string
+    {
+        $params = array_merge(['id' => $tournamentId], $filters);
+        return '/admin/tournament/matches/' . $matchId . $this->querySuffix($params);
+    }
+
+    /**
+     * @param array<string, int> $filters
+     */
+    private function tournamentAdminMatchDetailPath(string $slug, int $matchId, array $filters = []): string
+    {
+        return '/tournament/' . $slug . '/admin/matches/' . $matchId . $this->querySuffix($filters);
     }
 
     /**
@@ -833,6 +1287,340 @@ final class TournamentController extends BaseController
             'advancing_teams_count' => $advancingTeamsCount,
             'match_mode' => $matchMode,
         ];
+    }
+
+    /**
+     * @param array<string, mixed> $match
+     */
+    private function isDrawMatchForStandings(array $match, string $matchMode): bool
+    {
+        $setsA = (int) ($match['sets_summary_a'] ?? 0);
+        $setsB = (int) ($match['sets_summary_b'] ?? 0);
+
+        return $matchMode === 'fixed_2_sets' && $setsA === $setsB;
+    }
+
+    /**
+     * @param array<string, mixed> $match
+     */
+    private function winnerTeamIdForStandings(array $match, string $matchMode): int
+    {
+        if ($this->isDrawMatchForStandings($match, $matchMode)) {
+            return 0;
+        }
+
+        $setsA = (int) ($match['sets_summary_a'] ?? 0);
+        $setsB = (int) ($match['sets_summary_b'] ?? 0);
+        if ($setsA > $setsB) {
+            return (int) ($match['team_a_id'] ?? 0);
+        }
+        if ($setsB > $setsA) {
+            return (int) ($match['team_b_id'] ?? 0);
+        }
+
+        return (int) ($match['winner_team_id'] ?? 0);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $groups
+     * @param list<array<string, mixed>> $teams
+     * @param list<array<string, mixed>> $finishedMatches
+     * @param array<int, list<array{set_number: int, score_a: int, score_b: int}>> $setsByMatchId
+     * @return array<int, list<array<string, int|string>>>
+     */
+    private function buildGroupStandings(
+        array $groups,
+        array $teams,
+        array $finishedMatches,
+        array $setsByMatchId,
+        string $matchMode
+    ): array {
+        $groupIds = $this->groupIdSet($groups);
+        $groupIdsList = array_keys($groupIds);
+        $groupStandings = [];
+        $headToHeadByGroup = [];
+
+        foreach ($groupIdsList as $groupId) {
+            $groupStandings[$groupId] = [];
+            $headToHeadByGroup[$groupId] = [];
+        }
+
+        foreach ($teams as $team) {
+            $teamId = (int) ($team['id'] ?? 0);
+            $groupIdRaw = $team['group_id'] ?? null;
+            $groupId = is_numeric($groupIdRaw) ? (int) $groupIdRaw : 0;
+            if ($teamId <= 0 || $groupId <= 0 || !isset($groupIds[$groupId])) {
+                continue;
+            }
+
+            $groupStandings[$groupId][$teamId] = [
+                'team_id' => $teamId,
+                'team_name' => (string) ($team['team_name'] ?? ''),
+                'played' => 0,
+                'wins' => 0,
+                'draws' => 0,
+                'losses' => 0,
+                'sets_for' => 0,
+                'sets_against' => 0,
+                'points_for' => 0,
+                'points_against' => 0,
+                'point_diff' => 0,
+                'tournament_points' => 0,
+                'random_key' => mt_rand(1, PHP_INT_MAX),
+            ];
+        }
+
+        foreach ($finishedMatches as $match) {
+            $matchId = (int) ($match['id'] ?? 0);
+            $groupId = (int) ($match['group_id'] ?? 0);
+            $teamAId = (int) ($match['team_a_id'] ?? 0);
+            $teamBId = (int) ($match['team_b_id'] ?? 0);
+            if (
+                $matchId <= 0
+                || $groupId <= 0
+                || $teamAId <= 0
+                || $teamBId <= 0
+                || !isset($groupStandings[$groupId][$teamAId])
+                || !isset($groupStandings[$groupId][$teamBId])
+            ) {
+                continue;
+            }
+
+            $setsA = (int) ($match['sets_summary_a'] ?? 0);
+            $setsB = (int) ($match['sets_summary_b'] ?? 0);
+            $sets = $setsByMatchId[$matchId] ?? [];
+            $pointsA = 0;
+            $pointsB = 0;
+            foreach ($sets as $set) {
+                $pointsA += (int) ($set['score_a'] ?? 0);
+                $pointsB += (int) ($set['score_b'] ?? 0);
+            }
+
+            $groupStandings[$groupId][$teamAId]['played']++;
+            $groupStandings[$groupId][$teamBId]['played']++;
+            $groupStandings[$groupId][$teamAId]['sets_for'] += $setsA;
+            $groupStandings[$groupId][$teamAId]['sets_against'] += $setsB;
+            $groupStandings[$groupId][$teamBId]['sets_for'] += $setsB;
+            $groupStandings[$groupId][$teamBId]['sets_against'] += $setsA;
+            $groupStandings[$groupId][$teamAId]['points_for'] += $pointsA;
+            $groupStandings[$groupId][$teamAId]['points_against'] += $pointsB;
+            $groupStandings[$groupId][$teamBId]['points_for'] += $pointsB;
+            $groupStandings[$groupId][$teamBId]['points_against'] += $pointsA;
+
+            $pairKey = $teamAId < $teamBId ? ($teamAId . ':' . $teamBId) : ($teamBId . ':' . $teamAId);
+            if ($this->isDrawMatchForStandings($match, $matchMode)) {
+                $groupStandings[$groupId][$teamAId]['draws']++;
+                $groupStandings[$groupId][$teamBId]['draws']++;
+                $groupStandings[$groupId][$teamAId]['tournament_points']++;
+                $groupStandings[$groupId][$teamBId]['tournament_points']++;
+                $headToHeadByGroup[$groupId][$pairKey] = 0;
+                continue;
+            }
+
+            $winnerTeamId = $this->winnerTeamIdForStandings($match, $matchMode);
+            if ($winnerTeamId === $teamAId) {
+                $groupStandings[$groupId][$teamAId]['wins']++;
+                $groupStandings[$groupId][$teamBId]['losses']++;
+                $groupStandings[$groupId][$teamAId]['tournament_points'] += 2;
+                $headToHeadByGroup[$groupId][$pairKey] = $teamAId < $teamBId ? 1 : -1;
+                continue;
+            }
+            if ($winnerTeamId === $teamBId) {
+                $groupStandings[$groupId][$teamBId]['wins']++;
+                $groupStandings[$groupId][$teamAId]['losses']++;
+                $groupStandings[$groupId][$teamBId]['tournament_points'] += 2;
+                $headToHeadByGroup[$groupId][$pairKey] = $teamAId < $teamBId ? -1 : 1;
+            }
+        }
+
+        $sortedByGroup = [];
+        foreach ($groupIdsList as $groupId) {
+            $rows = array_values($groupStandings[$groupId] ?? []);
+            foreach ($rows as &$row) {
+                $row['point_diff'] = (int) $row['points_for'] - (int) $row['points_against'];
+            }
+            unset($row);
+
+            $headToHead = $headToHeadByGroup[$groupId] ?? [];
+            usort(
+                $rows,
+                static function (array $a, array $b) use ($headToHead): int {
+                    $pointsCompare = (int) $b['tournament_points'] <=> (int) $a['tournament_points'];
+                    if ($pointsCompare !== 0) {
+                        return $pointsCompare;
+                    }
+
+                    $idA = (int) $a['team_id'];
+                    $idB = (int) $b['team_id'];
+                    $pairKey = $idA < $idB ? ($idA . ':' . $idB) : ($idB . ':' . $idA);
+                    $headToHeadValue = $headToHead[$pairKey] ?? 0;
+                    if ($headToHeadValue !== 0) {
+                        if ($idA < $idB) {
+                            return $headToHeadValue === 1 ? -1 : 1;
+                        }
+
+                        return $headToHeadValue === -1 ? -1 : 1;
+                    }
+
+                    $pointDiffCompare = (int) $b['point_diff'] <=> (int) $a['point_diff'];
+                    if ($pointDiffCompare !== 0) {
+                        return $pointDiffCompare;
+                    }
+
+                    $pointsForCompare = (int) $b['points_for'] <=> (int) $a['points_for'];
+                    if ($pointsForCompare !== 0) {
+                        return $pointsForCompare;
+                    }
+
+                    return (int) $a['random_key'] <=> (int) $b['random_key'];
+                }
+            );
+
+            foreach ($rows as $index => &$row) {
+                $row['position'] = $index + 1;
+                unset($row['random_key']);
+            }
+            unset($row);
+
+            $sortedByGroup[$groupId] = $rows;
+        }
+
+        return $sortedByGroup;
+    }
+
+    /**
+     * @return array{
+     *     sets: list<array{set_number: int, score_a: int, score_b: int}>,
+     *     sets_summary_a: int,
+     *     sets_summary_b: int,
+     *     winner_team_id: int
+     * }|null
+     */
+    private function validateScoreInput(string $matchMode, int $teamAId, int $teamBId): ?array
+    {
+        if ($teamAId <= 0 || $teamBId <= 0) {
+            $this->setFlash('error', 'Match teams are missing.');
+            return null;
+        }
+
+        if (!in_array($matchMode, self::MATCH_MODES, true)) {
+            $this->setFlash('error', 'Unsupported match mode.');
+            return null;
+        }
+
+        $rawSets = [];
+        for ($setNumber = 1; $setNumber <= 3; $setNumber++) {
+            $scoreA = $this->readSetScore($setNumber, 'a');
+            $scoreB = $this->readSetScore($setNumber, 'b');
+            if ($scoreA === null && $scoreB === null) {
+                continue;
+            }
+            if ($scoreA === null || $scoreB === null) {
+                $this->setFlash('error', sprintf('Set %d must have both scores filled.', $setNumber));
+                return null;
+            }
+            if ($scoreA === $scoreB) {
+                $this->setFlash('error', sprintf('Set %d cannot end in a tie.', $setNumber));
+                return null;
+            }
+
+            $rawSets[] = [
+                'set_number' => $setNumber,
+                'score_a' => $scoreA,
+                'score_b' => $scoreB,
+            ];
+        }
+
+        if ($matchMode === 'fixed_2_sets') {
+            if (count($rawSets) !== 2 || (int) ($rawSets[0]['set_number'] ?? 0) !== 1 || (int) ($rawSets[1]['set_number'] ?? 0) !== 2) {
+                $this->setFlash('error', 'Fixed 2 sets mode requires exactly set 1 and set 2.');
+                return null;
+            }
+
+            $setWinsA = 0;
+            $setWinsB = 0;
+            $totalPointsA = 0;
+            $totalPointsB = 0;
+            foreach ($rawSets as $set) {
+                $scoreA = (int) $set['score_a'];
+                $scoreB = (int) $set['score_b'];
+                $totalPointsA += $scoreA;
+                $totalPointsB += $scoreB;
+                if ($scoreA > $scoreB) {
+                    $setWinsA++;
+                } else {
+                    $setWinsB++;
+                }
+            }
+
+            if ($totalPointsA === $totalPointsB) {
+                $this->setFlash('error', 'Fixed 2 sets draw needs a total-points winner. Totals are tied.');
+                return null;
+            }
+
+            return [
+                'sets' => $rawSets,
+                'sets_summary_a' => $setWinsA,
+                'sets_summary_b' => $setWinsB,
+                'winner_team_id' => $totalPointsA > $totalPointsB ? $teamAId : $teamBId,
+            ];
+        }
+
+        if (count($rawSets) < 2 || count($rawSets) > 3) {
+            $this->setFlash('error', 'Best of 3 mode requires 2 or 3 sets.');
+            return null;
+        }
+        if ((int) ($rawSets[0]['set_number'] ?? 0) !== 1 || (int) ($rawSets[1]['set_number'] ?? 0) !== 2) {
+            $this->setFlash('error', 'Best of 3 mode requires set 1 and set 2.');
+            return null;
+        }
+        if (count($rawSets) === 3 && (int) ($rawSets[2]['set_number'] ?? 0) !== 3) {
+            $this->setFlash('error', 'Only set 3 can be the optional decider.');
+            return null;
+        }
+
+        $setWinsA = 0;
+        $setWinsB = 0;
+        foreach ($rawSets as $index => $set) {
+            $scoreA = (int) $set['score_a'];
+            $scoreB = (int) $set['score_b'];
+            if ($scoreA > $scoreB) {
+                $setWinsA++;
+            } else {
+                $setWinsB++;
+            }
+
+            $isLastEnteredSet = $index === count($rawSets) - 1;
+            if (($setWinsA >= 2 || $setWinsB >= 2) && !$isLastEnteredSet) {
+                $this->setFlash('error', 'Best of 3 match cannot continue after a team reaches 2 set wins.');
+                return null;
+            }
+        }
+
+        if (!($setWinsA === 2 || $setWinsB === 2)) {
+            $this->setFlash('error', 'Best of 3 match must end 2:0 or 2:1.');
+            return null;
+        }
+
+        return [
+            'sets' => $rawSets,
+            'sets_summary_a' => $setWinsA,
+            'sets_summary_b' => $setWinsB,
+            'winner_team_id' => $setWinsA > $setWinsB ? $teamAId : $teamBId,
+        ];
+    }
+
+    private function readSetScore(int $setNumber, string $side): ?int
+    {
+        $value = $this->requestPostString('set_' . $setNumber . '_' . $side);
+        if ($value === '') {
+            return null;
+        }
+        if (!ctype_digit($value)) {
+            return null;
+        }
+
+        return (int) $value;
     }
 
     /**

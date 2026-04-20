@@ -90,6 +90,37 @@ docs/
   - regeneration replaces only `stage = 'group'` matches
   - stores `court_number`, `schedule_order`, and `planned_start`
   - shows generated group-stage matches in tournament admin page
+- Group match lifecycle and score entry
+  - match detail pages:
+    - superadmin: `/admin/tournament/matches/{matchId}?id={tournamentId}`
+    - tournament admin: `/tournament/{slug}/admin/matches/{matchId}`
+  - match status flow:
+    - `scheduled -> in_progress` via explicit Start action
+    - `scheduled|in_progress -> finished` by saving valid score
+  - Start action is available in both match detail and matches overview
+  - score entry stores per-set values in `match_sets`
+  - saving score updates `matches.sets_summary_a`, `matches.sets_summary_b`, `matches.winner_team_id`, and `matches.status`
+  - finished group matches can be reopened in detail and corrected (prefilled values)
+  - finished group matches can be reset back to `scheduled` (clears `match_sets`, summaries, winner)
+  - supports both modes:
+    - `fixed_2_sets`: exactly 2 sets
+    - `best_of_3`: 2 or 3 sets, first to 2 set wins
+  - match rows in Matches tab are clickable and open match detail
+  - existing group/court filters remain available and are preserved when navigating to/from match detail
+- Group standings in Groups tab
+  - computed dynamically from finished group-stage matches only
+  - per group table includes:
+    - matches played, wins, draws, losses
+    - sets for/against
+    - points scored/conceded
+    - point difference
+    - tournament points
+  - sorting order:
+    - tournament points
+    - head-to-head result
+    - point difference
+    - points scored
+    - random fallback
 - Tournament admin slug-based access
   - login at `/tournament/{slug}/login` with tournament password
   - protected tournament admin pages:
@@ -144,7 +175,6 @@ Prepared for future scheduling and manual reorder with fields including:
 
 ## Not Implemented Yet
 
-- Standings
 - Knockout progression
 - Public pages
 - Drag and drop scheduling/reordering
