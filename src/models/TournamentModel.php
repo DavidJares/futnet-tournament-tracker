@@ -22,7 +22,7 @@ final class TournamentModel
     {
         $pdo = $this->database->pdo();
         $statement = $pdo->query(
-            'SELECT id, name, slug, event_date, location, number_of_groups, number_of_courts,
+            'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
                     match_duration_minutes, advancing_teams_count, match_mode, created_at
              FROM tournaments
              ORDER BY created_at DESC, id DESC'
@@ -49,6 +49,7 @@ final class TournamentModel
                 name,
                 slug,
                 event_date,
+                start_time,
                 location,
                 admin_password_hash,
                 number_of_groups,
@@ -62,6 +63,7 @@ final class TournamentModel
                 :name,
                 :slug,
                 :event_date,
+                :start_time,
                 :location,
                 :admin_password_hash,
                 :number_of_groups,
@@ -78,6 +80,7 @@ final class TournamentModel
             'name' => (string) $data['name'],
             'slug' => (string) $data['slug'],
             'event_date' => $this->nullIfEmpty((string) $data['event_date']),
+            'start_time' => $this->nullIfEmpty((string) $data['start_time']),
             'location' => $this->nullIfEmpty((string) $data['location']),
             'admin_password_hash' => $adminPasswordHash,
             'number_of_groups' => (int) $data['number_of_groups'],
@@ -100,7 +103,7 @@ final class TournamentModel
     {
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
-            'SELECT id, name, slug, event_date, location, number_of_groups, number_of_courts,
+            'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
                     match_duration_minutes, advancing_teams_count, match_mode, created_at, updated_at
              FROM tournaments
              WHERE id = :id
@@ -119,7 +122,7 @@ final class TournamentModel
     {
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
-            'SELECT id, name, slug, event_date, location, number_of_groups, number_of_courts,
+            'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
                     match_duration_minutes, advancing_teams_count, match_mode, created_at, updated_at
              FROM tournaments
              WHERE slug = :slug
@@ -170,6 +173,7 @@ final class TournamentModel
             'name' => (string) $data['name'],
             'slug' => (string) $data['slug'],
             'event_date' => $this->nullIfEmpty((string) $data['event_date']),
+            'start_time' => $this->nullIfEmpty((string) $data['start_time']),
             'location' => $this->nullIfEmpty((string) $data['location']),
             'number_of_groups' => (int) $data['number_of_groups'],
             'number_of_courts' => (int) $data['number_of_courts'],
@@ -192,9 +196,10 @@ final class TournamentModel
 
         $statement = $pdo->prepare(
             'UPDATE tournaments
-             SET name = :name,
+                 SET name = :name,
                  slug = :slug,
                  event_date = :event_date,
+                 start_time = :start_time,
                  location = :location,
                  number_of_groups = :number_of_groups,
                  number_of_courts = :number_of_courts,

@@ -40,6 +40,7 @@ $router->post('/admin/tournament/teams/update', [$tournamentController, 'updateT
 $router->post('/admin/tournament/teams/delete', [$tournamentController, 'deleteTeam']);
 $router->post('/admin/tournament/teams/assign', [$tournamentController, 'assignTeamGroup']);
 $router->post('/admin/tournament/teams/assign-auto', [$tournamentController, 'autoAssignTeams']);
+$router->post('/admin/tournament/matches/generate', [$tournamentController, 'generateGroupMatches']);
 
 $router->get('/tournament/{slug}/login', [$tournamentAdminAuthController, 'loginForm']);
 $router->post('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login']);
@@ -51,6 +52,7 @@ $router->post('/tournament/{slug}/admin/teams/update', [$tournamentController, '
 $router->post('/tournament/{slug}/admin/teams/delete', [$tournamentController, 'deleteTeamBySlug']);
 $router->post('/tournament/{slug}/admin/teams/assign', [$tournamentController, 'assignTeamGroupBySlug']);
 $router->post('/tournament/{slug}/admin/teams/assign-auto', [$tournamentController, 'autoAssignTeamsBySlug']);
+$router->post('/tournament/{slug}/admin/matches/generate', [$tournamentController, 'generateGroupMatchesBySlug']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

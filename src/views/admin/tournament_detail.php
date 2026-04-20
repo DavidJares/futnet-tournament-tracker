@@ -22,10 +22,29 @@ declare(strict_types=1);
 /** @var string $deleteTeamActionUrl */
 /** @var string $assignTeamActionUrl */
 /** @var string $autoAssignTeamsActionUrl */
+/** @var string $generateGroupMatchesActionUrl */
+/** @var list<array<string, mixed>> $groupMatches */
+/** @var bool $hasGroupMatches */
 
 $tournamentId = (int) ($tournament['id'] ?? 0);
 $backUrl = isset($backUrl) && is_string($backUrl) && $backUrl !== '' ? $backUrl : null;
 $backLabel = isset($backLabel) && is_string($backLabel) && $backLabel !== '' ? $backLabel : 'Back to dashboard';
+$hasUnassignedTeams = (int) ($groupAssignment['unassigned_count'] ?? 0) > 0;
+$hasExistingGroupMatches = isset($hasGroupMatches) && $hasGroupMatches;
+$generateConfirmMessageParts = [];
+if ($hasUnassignedTeams) {
+    $generateConfirmMessageParts[] = 'Some teams are unassigned and will be skipped.';
+}
+if ($hasExistingGroupMatches) {
+    $generateConfirmMessageParts[] = 'Existing group-stage matches will be replaced.';
+}
+$generateConfirmMessage = implode(' ', $generateConfirmMessageParts);
+$generateFormOnSubmit = $generateConfirmMessage !== '' ? "return confirm('" . htmlspecialchars($generateConfirmMessage . ' Continue?', ENT_QUOTES, 'UTF-8') . "');" : '';
+$startTimeValueRaw = (string) ($tournament['start_time'] ?? '');
+$startTimeValue = '';
+if (preg_match('/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/', $startTimeValueRaw) === 1) {
+    $startTimeValue = substr($startTimeValueRaw, 0, 5);
+}
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <h1 class="h4 m-0">Tournament detail</h1>
@@ -57,6 +76,10 @@ $backLabel = isset($backLabel) && is_string($backLabel) && $backLabel !== '' ? $
                         <div class="mb-2">
                             <label for="event_date" class="form-label">Event date</label>
                             <input type="date" name="event_date" id="event_date" class="form-control" value="<?= htmlspecialchars((string) ($tournament['event_date'] ?? ''), ENT_QUOTES, 'UTF-8') ?>">
+                        </div>
+                        <div class="mb-2">
+                            <label for="start_time" class="form-label">Start time</label>
+                            <input type="time" name="start_time" id="start_time" class="form-control" value="<?= htmlspecialchars($startTimeValue, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div class="mb-2">
                             <label for="location" class="form-label">Location</label>
@@ -227,6 +250,95 @@ $backLabel = isset($backLabel) && is_string($backLabel) && $backLabel !== '' ? $
                             <?php endforeach; ?>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white">
+                <button class="btn btn-link text-decoration-none p-0 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#groupMatchesGenerationCollapse" aria-expanded="true" aria-controls="groupMatchesGenerationCollapse">
+                    Group stage matches
+                </button>
+            </div>
+            <div id="groupMatchesGenerationCollapse" class="collapse show">
+                <div class="card-body">
+                    <p class="text-muted small mb-2">
+                        Generates round-robin matches in each group, then assigns courts, schedule order, and planned start.
+                    </p>
+                    <?php if ($hasUnassignedTeams): ?>
+                        <div class="alert alert-warning py-2 mb-2 small" role="alert">
+                            There are unassigned teams. Generation will include only assigned teams.
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($hasExistingGroupMatches): ?>
+                        <div class="alert alert-warning py-2 mb-2 small" role="alert">
+                            Group-stage matches already exist. Generation will replace existing group-stage matches.
+                        </div>
+                    <?php endif; ?>
+                    <form method="post" action="<?= htmlspecialchars($generateGroupMatchesActionUrl, ENT_QUOTES, 'UTF-8') ?>"<?= $generateFormOnSubmit !== '' ? ' onsubmit="' . $generateFormOnSubmit . '"' : '' ?>>
+                        <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
+                        <?php if ($hasUnassignedTeams): ?>
+                            <input type="hidden" name="confirm_unassigned" value="1">
+                        <?php endif; ?>
+                        <?php if ($hasExistingGroupMatches): ?>
+                            <input type="hidden" name="confirm_regenerate" value="1">
+                        <?php endif; ?>
+                        <button type="submit" class="btn btn-outline-primary">Generate group-stage matches</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-white">
+                <button class="btn btn-link text-decoration-none p-0 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#generatedGroupMatchesCollapse" aria-expanded="true" aria-controls="generatedGroupMatchesCollapse">
+                    Generated group matches
+                </button>
+            </div>
+            <div id="generatedGroupMatchesCollapse" class="collapse show">
+                <div class="card-body p-0">
+                    <?php if (count($groupMatches) === 0): ?>
+                        <p class="text-muted p-3 mb-0">No group-stage matches generated yet.</p>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0 align-middle">
+                                <thead>
+                                <tr>
+                                    <th>Order</th>
+                                    <th>Group</th>
+                                    <th>Team A</th>
+                                    <th>Team B</th>
+                                    <th>Court</th>
+                                    <th>Planned start</th>
+                                    <th>Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <?php foreach ($groupMatches as $match): ?>
+                                    <?php
+                                    $plannedStartRaw = (string) ($match['planned_start'] ?? '');
+                                    $plannedStart = $plannedStartRaw;
+                                    if ($plannedStartRaw !== '') {
+                                        $dateTime = DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $plannedStartRaw);
+                                        if ($dateTime instanceof DateTimeImmutable) {
+                                            $plannedStart = $dateTime->format('Y-m-d H:i');
+                                        }
+                                    }
+                                    ?>
+                                    <tr>
+                                        <td><?= (int) ($match['schedule_order'] ?? 0) ?></td>
+                                        <td><?= htmlspecialchars((string) ($match['group_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
+                                        <td><?= htmlspecialchars((string) ($match['team_a_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
+                                        <td><?= htmlspecialchars((string) ($match['team_b_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></td>
+                                        <td><?= (int) ($match['court_number'] ?? 0) ?></td>
+                                        <td><?= htmlspecialchars($plannedStart !== '' ? $plannedStart : '-', ENT_QUOTES, 'UTF-8') ?></td>
+                                        <td><span class="badge text-bg-secondary"><?= htmlspecialchars((string) ($match['status'] ?? 'pending'), ENT_QUOTES, 'UTF-8') ?></span></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

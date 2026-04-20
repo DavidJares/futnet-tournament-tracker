@@ -79,6 +79,8 @@ final class AdminDashboardController extends BaseController
         $name = $this->requestPostString('name');
         $slug = $this->requestPostString('slug');
         $eventDate = $this->requestPostString('event_date');
+        $startTimeRaw = $this->requestPostString('start_time');
+        $startTime = $this->normalizeTimeHHMMOrEmpty($startTimeRaw);
         $location = $this->requestPostString('location');
         $adminPassword = $this->requestPostString('admin_password');
         $numberOfGroups = (int) $this->requestPostString('number_of_groups');
@@ -112,6 +114,11 @@ final class AdminDashboardController extends BaseController
             return null;
         }
 
+        if ($startTime === null) {
+            $this->setFlash('error', 'Start time must use HH:MM format.');
+            return null;
+        }
+
         if ($numberOfGroups < 1 || $numberOfGroups > 52) {
             $this->setFlash('error', 'Number of groups must be between 1 and 52.');
             return null;
@@ -141,6 +148,7 @@ final class AdminDashboardController extends BaseController
             'name' => $name,
             'slug' => $slug,
             'event_date' => $eventDate,
+            'start_time' => $startTime,
             'location' => $location,
             'admin_password' => $adminPassword,
             'number_of_groups' => $numberOfGroups,

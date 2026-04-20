@@ -181,6 +181,24 @@ abstract class BaseController
         $this->redirect('/admin/login');
     }
 
+    /**
+     * Accepts HH:MM or HH:MM:SS, returns normalized HH:MM.
+     * Returns empty string for empty input and null for invalid value.
+     */
+    protected function normalizeTimeHHMMOrEmpty(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/', $value) !== 1) {
+            return null;
+        }
+
+        return substr($value, 0, 5);
+    }
+
     protected function requestRouteString(string $key): string
     {
         $routeParams = $_SERVER['_route_params'] ?? null;

@@ -60,6 +60,7 @@ docs/
     - name
     - slug
     - event date
+    - start time
     - location
     - tournament admin password
     - number of groups
@@ -77,6 +78,13 @@ docs/
   - automatic balanced random assignment across groups
   - manual reassignment per team via dropdown
   - summary of total teams, groups, teams per group, and unassigned count
+- Group-stage match generation and initial scheduling
+  - round robin inside each group (assigned teams only)
+  - confirmation required when unassigned teams are present
+  - confirmation required when regenerating existing group-stage matches
+  - regeneration replaces only `stage = 'group'` matches
+  - stores `court_number`, `schedule_order`, and `planned_start`
+  - shows generated group-stage matches in tournament admin page
 - Tournament admin slug-based access
   - login at `/tournament/{slug}/login` with tournament password
   - protected tournament admin page at `/tournament/{slug}/admin`
@@ -127,7 +135,6 @@ Prepared for future scheduling and manual reorder with fields including:
 
 ## Not Implemented Yet
 
-- Match generation
 - Standings
 - Knockout progression
 - Public pages

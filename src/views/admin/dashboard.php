@@ -78,6 +78,10 @@ declare(strict_types=1);
                         <input type="date" class="form-control" name="event_date" id="event_date">
                     </div>
                     <div class="mb-2">
+                        <label for="start_time" class="form-label">Start time</label>
+                        <input type="time" class="form-control" name="start_time" id="start_time" value="09:00">
+                    </div>
+                    <div class="mb-2">
                         <label for="location" class="form-label">Location</label>
                         <input type="text" class="form-control" name="location" id="location" maxlength="150">
                     </div>
