@@ -179,7 +179,7 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
             'SELECT id, name, sort_order
-             FROM groups
+             FROM tournament_groups
              WHERE tournament_id = :tournament_id
              ORDER BY sort_order ASC'
         );
@@ -197,7 +197,7 @@ final class TournamentModel
 
         $select = $pdo->prepare(
             'SELECT id, sort_order, name
-             FROM groups
+             FROM tournament_groups
              WHERE tournament_id = :tournament_id
              ORDER BY sort_order ASC'
         );
@@ -222,12 +222,12 @@ final class TournamentModel
         }
 
         $insert = $pdo->prepare(
-            'INSERT INTO groups (tournament_id, name, sort_order, created_at, updated_at)
+            'INSERT INTO tournament_groups (tournament_id, name, sort_order, created_at, updated_at)
              VALUES (:tournament_id, :name, :sort_order, NOW(), NOW())'
         );
 
         $update = $pdo->prepare(
-            'UPDATE groups
+            'UPDATE tournament_groups
              SET name = :name, updated_at = NOW()
              WHERE id = :id'
         );
@@ -255,7 +255,7 @@ final class TournamentModel
         }
 
         $delete = $pdo->prepare(
-            'DELETE FROM groups
+            'DELETE FROM tournament_groups
              WHERE tournament_id = :tournament_id
                AND sort_order > :group_count'
         );

@@ -85,7 +85,7 @@ Migrations create these tables:
 - `schema_migrations`
 - `superadmins`
 - `tournaments`
-- `groups`
+- `tournament_groups`
 - `teams`
 - `matches`
 - `match_sets`
@@ -94,7 +94,7 @@ Additional migration:
 
 - `20260419_000002_add_group_id_to_teams`
   - adds nullable `teams.group_id`
-  - adds FK to `groups.id` (`ON DELETE SET NULL`)
+  - adds FK to `tournament_groups.id` (`ON DELETE SET NULL`)
   - keeps existing teams safely as unassigned
 
 ### Notes About `matches` Table

@@ -44,8 +44,8 @@ declare(strict_types=1);
                                 <td><?= htmlspecialchars($eventDate !== '' ? $eventDate : '-', ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><span class="badge bg-secondary"><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></span></td>
                                 <td class="text-end">
-                                    <a class="btn btn-sm btn-outline-primary" href="/admin/tournament?id=<?= $tournamentId ?>">Detail</a>
-                                    <form method="post" action="/admin/tournaments/delete" class="d-inline" onsubmit="return confirm('Delete this tournament and all related data?');">
+                                    <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars($url('/admin/tournament?id=' . $tournamentId), ENT_QUOTES, 'UTF-8') ?>">Detail</a>
+                                    <form method="post" action="<?= htmlspecialchars($url('/admin/tournaments/delete'), ENT_QUOTES, 'UTF-8') ?>" class="d-inline" onsubmit="return confirm('Delete this tournament and all related data?');">
                                         <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                                         <input type="hidden" name="confirm_delete" value="1">
                                         <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
@@ -64,7 +64,7 @@ declare(strict_types=1);
         <div class="card shadow-sm">
             <div class="card-body">
                 <h2 class="h5">Create tournament</h2>
-                <form method="post" action="/admin/tournaments/create">
+                <form method="post" action="<?= htmlspecialchars($url('/admin/tournaments/create'), ENT_QUOTES, 'UTF-8') ?>">
                     <div class="mb-2">
                         <label for="name" class="form-label">Name</label>
                         <input type="text" class="form-control" name="name" id="name" required maxlength="150">

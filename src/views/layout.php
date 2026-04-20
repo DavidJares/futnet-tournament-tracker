@@ -25,11 +25,11 @@ if ($flashType === 'error') {
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/admin/dashboard"><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></a>
+        <a class="navbar-brand" href="<?= htmlspecialchars($url('/admin/dashboard'), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></a>
         <div class="d-flex align-items-center gap-2 ms-auto">
             <?php if (is_array($currentSuperadmin ?? null)): ?>
                 <span class="text-light small"><?= htmlspecialchars((string) $currentSuperadmin['username'], ENT_QUOTES, 'UTF-8') ?></span>
-                <form method="post" action="/admin/logout" class="m-0">
+                <form method="post" action="<?= htmlspecialchars($url('/admin/logout'), ENT_QUOTES, 'UTF-8') ?>" class="m-0">
                     <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
                 </form>
             <?php endif; ?>

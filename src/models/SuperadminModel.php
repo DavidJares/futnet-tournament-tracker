@@ -30,7 +30,13 @@ final class SuperadminModel
     public function tableExists(): bool
     {
         $pdo = $this->database->pdo();
-        $statement = $pdo->prepare('SHOW TABLES LIKE :table_name');
+        $statement = $pdo->prepare(
+            'SELECT 1
+             FROM information_schema.tables
+             WHERE table_schema = DATABASE()
+               AND table_name = :table_name
+             LIMIT 1'
+        );
         $statement->execute(['table_name' => 'superadmins']);
 
         return $statement->fetchColumn() !== false;

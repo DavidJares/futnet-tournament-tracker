@@ -47,7 +47,7 @@ final class MigrationModel
                 continue;
             }
 
-            $pdo->beginTransaction();
+            $transactionStarted = $pdo->beginTransaction();
             try {
                 foreach ($statements as $statement) {
                     if (!is_string($statement) || trim($statement) === '') {
@@ -66,9 +66,12 @@ final class MigrationModel
                     'description' => $description,
                 ]);
 
-                $pdo->commit();
+                // MySQL can implicitly commit transactions on DDL statements.
+                if ($transactionStarted && $pdo->inTransaction()) {
+                    $pdo->commit();
+                }
             } catch (\Throwable $throwable) {
-                if ($pdo->inTransaction()) {
+                if ($transactionStarted && $pdo->inTransaction()) {
                     $pdo->rollBack();
                 }
 

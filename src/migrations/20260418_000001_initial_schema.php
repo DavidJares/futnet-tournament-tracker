@@ -30,16 +30,16 @@ return [
             updated_at DATETIME NOT NULL
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
-        "CREATE TABLE IF NOT EXISTS groups (
+        "CREATE TABLE IF NOT EXISTS tournament_groups (
             id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             tournament_id INT UNSIGNED NOT NULL,
             name VARCHAR(20) NOT NULL,
             sort_order SMALLINT UNSIGNED NOT NULL,
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
-            UNIQUE KEY uniq_groups_tournament_name (tournament_id, name),
-            UNIQUE KEY uniq_groups_tournament_sort_order (tournament_id, sort_order),
-            CONSTRAINT fk_groups_tournament
+            UNIQUE KEY uniq_tournament_groups_tournament_name (tournament_id, name),
+            UNIQUE KEY uniq_tournament_groups_tournament_sort_order (tournament_id, sort_order),
+            CONSTRAINT fk_tournament_groups_tournament
                 FOREIGN KEY (tournament_id) REFERENCES tournaments (id)
                 ON DELETE CASCADE
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
@@ -86,7 +86,7 @@ return [
                 FOREIGN KEY (tournament_id) REFERENCES tournaments (id)
                 ON DELETE CASCADE,
             CONSTRAINT fk_matches_group
-                FOREIGN KEY (group_id) REFERENCES groups (id)
+                FOREIGN KEY (group_id) REFERENCES tournament_groups (id)
                 ON DELETE SET NULL,
             CONSTRAINT fk_matches_team_a
                 FOREIGN KEY (team_a_id) REFERENCES teams (id)

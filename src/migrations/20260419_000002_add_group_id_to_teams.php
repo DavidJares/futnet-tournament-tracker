@@ -14,7 +14,7 @@ return [
 
         "ALTER TABLE teams
          ADD CONSTRAINT fk_teams_group
-             FOREIGN KEY (group_id) REFERENCES groups (id)
+             FOREIGN KEY (group_id) REFERENCES tournament_groups (id)
              ON DELETE SET NULL",
     ],
 ];

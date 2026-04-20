@@ -40,7 +40,25 @@ $router->post('/admin/tournament/teams/assign', [$tournamentController, 'assignT
 $router->post('/admin/tournament/teams/assign-auto', [$tournamentController, 'autoAssignTeams']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+$scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php');
+$scriptDirectory = str_replace('\\', '/', dirname($scriptName));
+$scriptDirectory = $scriptDirectory === '/' || $scriptDirectory === '.' ? '' : rtrim($scriptDirectory, '/');
+
+$path = is_string($requestUriPath) && $requestUriPath !== '' ? $requestUriPath : '/';
+
+if ($scriptDirectory !== '' && strncmp($path, $scriptDirectory, strlen($scriptDirectory)) === 0) {
+    $path = substr($path, strlen($scriptDirectory));
+    if (!is_string($path) || $path === '') {
+        $path = '/';
+    }
+}
+
+if ($path === '/index.php') {
+    $path = '/';
+} elseif (strncmp($path, '/index.php/', strlen('/index.php/')) === 0) {
+    $path = substr($path, strlen('/index.php'));
+}
 
 if (!is_string($path) || $path === '') {
     $path = '/';

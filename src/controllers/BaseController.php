@@ -34,6 +34,7 @@ abstract class BaseController
         $config = $this->services['config'] ?? [];
         $flash = $this->pullFlash();
         $currentSuperadmin = $this->currentSuperadmin();
+        $url = fn (string $path = '/'): string => $this->url($path);
         extract($data, EXTR_SKIP);
 
         require __DIR__ . '/../views/layout.php';
@@ -41,8 +42,38 @@ abstract class BaseController
 
     protected function redirect(string $path): void
     {
-        header('Location: ' . $path);
+        header('Location: ' . $this->url($path));
         exit;
+    }
+
+    protected function url(string $path = '/'): string
+    {
+        if (preg_match('#^https?://#i', $path) === 1) {
+            return $path;
+        }
+
+        $normalizedPath = '/' . ltrim($path, '/');
+        if ($path === '' || $path === '/') {
+            $normalizedPath = '/';
+        }
+
+        $basePath = $this->basePath();
+        if ($basePath === '') {
+            return $normalizedPath;
+        }
+
+        return $basePath . $normalizedPath;
+    }
+
+    protected function basePath(): string
+    {
+        $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php');
+        $basePath = str_replace('\\', '/', dirname($scriptName));
+        if ($basePath === '.' || $basePath === '/') {
+            return '';
+        }
+
+        return rtrim($basePath, '/');
     }
 
     protected function db(): Database

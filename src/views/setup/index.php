@@ -8,7 +8,7 @@ declare(strict_types=1);
             <div class="card-body">
                 <h1 class="h4 mb-3">Initial superadmin setup</h1>
                 <p class="text-muted">This page is available only before the first superadmin account is created.</p>
-                <form method="post" action="/setup">
+                <form method="post" action="<?= htmlspecialchars($url('/setup'), ENT_QUOTES, 'UTF-8') ?>">
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
                         <input type="text" name="username" id="username" class="form-control" required maxlength="100" autocomplete="username">

@@ -7,7 +7,7 @@ declare(strict_types=1);
         <div class="card shadow-sm">
             <div class="card-body">
                 <h1 class="h4 mb-3">Superadmin login</h1>
-                <form method="post" action="/admin/login">
+                <form method="post" action="<?= htmlspecialchars($url('/admin/login'), ENT_QUOTES, 'UTF-8') ?>">
                     <div class="mb-3">
                         <label for="username" class="form-label">Username</label>
                         <input type="text" name="username" id="username" class="form-control" required maxlength="100" autocomplete="username">
