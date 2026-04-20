@@ -34,6 +34,7 @@ $router->post('/admin/tournaments/create', [$adminDashboardController, 'createTo
 $router->post('/admin/tournaments/delete', [$adminDashboardController, 'deleteTournament']);
 
 $router->get('/admin/tournament', [$tournamentController, 'detail']);
+$router->get('/admin/tournament/{section}', [$tournamentController, 'detailSection']);
 $router->post('/admin/tournament/update', [$tournamentController, 'update']);
 $router->post('/admin/tournament/teams/create', [$tournamentController, 'createTeam']);
 $router->post('/admin/tournament/teams/update', [$tournamentController, 'updateTeam']);
@@ -46,6 +47,7 @@ $router->get('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login
 $router->post('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login']);
 $router->post('/tournament/{slug}/logout', [$tournamentAdminAuthController, 'logout']);
 $router->get('/tournament/{slug}/admin', [$tournamentController, 'detailBySlug']);
+$router->get('/tournament/{slug}/admin/{section}', [$tournamentController, 'detailBySlugSection']);
 $router->post('/tournament/{slug}/admin/update', [$tournamentController, 'updateBySlug']);
 $router->post('/tournament/{slug}/admin/teams/create', [$tournamentController, 'createTeamBySlug']);
 $router->post('/tournament/{slug}/admin/teams/update', [$tournamentController, 'updateTeamBySlug']);

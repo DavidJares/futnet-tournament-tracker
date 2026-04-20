@@ -56,6 +56,11 @@ docs/
   - delete tournament (with confirmation)
   - link to tournament detail
 - Tournament admin foundation (`/admin/tournament?id={id}`)
+  - tab-like section navigation (server-rendered routes):
+    - Tournament
+    - Groups
+    - Matches
+    - Teams
   - edit tournament settings:
     - name
     - slug
@@ -87,7 +92,11 @@ docs/
   - shows generated group-stage matches in tournament admin page
 - Tournament admin slug-based access
   - login at `/tournament/{slug}/login` with tournament password
-  - protected tournament admin page at `/tournament/{slug}/admin`
+  - protected tournament admin pages:
+    - `/tournament/{slug}/admin`
+    - `/tournament/{slug}/admin/groups`
+    - `/tournament/{slug}/admin/matches`
+    - `/tournament/{slug}/admin/teams`
   - tournament admin session is bound to one specific tournament
   - tournament admin logout at `POST /tournament/{slug}/logout`
   - superadmin session remains separate and unchanged

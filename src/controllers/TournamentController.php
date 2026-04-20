@@ -14,6 +14,7 @@ use Throwable;
 final class TournamentController extends BaseController
 {
     private const MATCH_MODES = ['fixed_2_sets', 'best_of_3'];
+    private const ADMIN_SECTIONS = ['tournament', 'groups', 'matches', 'teams'];
 
     public function detail(): void
     {
@@ -32,7 +33,35 @@ final class TournamentController extends BaseController
             $this->redirect('/admin/dashboard');
         }
 
-        $this->renderTournamentDetail($tournament, 'superadmin');
+        $this->renderTournamentDetail($tournament, 'superadmin', 'tournament');
+    }
+
+    public function detailSection(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $section = $this->sectionFromRoute();
+        if ($section === null) {
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '404 Not Found';
+            return;
+        }
+
+        $tournamentId = $this->requestGetInt('id');
+        if ($tournamentId <= 0) {
+            $this->setFlash('error', 'Invalid tournament selected.');
+            $this->redirect('/admin/dashboard');
+        }
+
+        $tournamentModel = new TournamentModel($this->db());
+        $tournament = $tournamentModel->findById($tournamentId);
+        if ($tournament === null) {
+            $this->setFlash('error', 'Tournament not found.');
+            $this->redirect('/admin/dashboard');
+        }
+
+        $this->renderTournamentDetail($tournament, 'superadmin', $section);
     }
 
     public function detailBySlug(): void
@@ -43,7 +72,26 @@ final class TournamentController extends BaseController
         }
 
         $context = $this->currentSuperadmin() !== null ? 'superadmin' : 'tournament_admin';
-        $this->renderTournamentDetail($tournament, $context);
+        $this->renderTournamentDetail($tournament, $context, 'tournament');
+    }
+
+    public function detailBySlugSection(): void
+    {
+        $section = $this->sectionFromRoute();
+        if ($section === null) {
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '404 Not Found';
+            return;
+        }
+
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $context = $this->currentSuperadmin() !== null ? 'superadmin' : 'tournament_admin';
+        $this->renderTournamentDetail($tournament, $context, $section);
     }
 
     public function update(): void
@@ -54,7 +102,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleUpdate($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleUpdate($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function updateBySlug(): void
@@ -64,7 +112,13 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleUpdate($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin', true);
+        $redirectSection = $this->sectionFromPost();
+        $this->handleUpdate(
+            $tournament,
+            $this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], $redirectSection),
+            true,
+            $redirectSection
+        );
     }
 
     public function createTeam(): void
@@ -75,7 +129,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleCreateTeam($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleCreateTeam($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function createTeamBySlug(): void
@@ -85,7 +139,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleCreateTeam($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+        $this->handleCreateTeam($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
     public function updateTeam(): void
@@ -96,7 +150,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleUpdateTeam($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleUpdateTeam($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function updateTeamBySlug(): void
@@ -106,7 +160,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleUpdateTeam($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+        $this->handleUpdateTeam($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
     public function deleteTeam(): void
@@ -117,7 +171,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleDeleteTeam($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleDeleteTeam($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function deleteTeamBySlug(): void
@@ -127,7 +181,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleDeleteTeam($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+        $this->handleDeleteTeam($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
     public function assignTeamGroup(): void
@@ -138,7 +192,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleAssignTeamGroup($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleAssignTeamGroup($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function assignTeamGroupBySlug(): void
@@ -148,7 +202,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleAssignTeamGroup($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+        $this->handleAssignTeamGroup($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
     public function autoAssignTeams(): void
@@ -159,7 +213,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleAutoAssignTeams($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleAutoAssignTeams($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function autoAssignTeamsBySlug(): void
@@ -169,7 +223,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleAutoAssignTeams($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+        $this->handleAutoAssignTeams($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
     public function generateGroupMatches(): void
@@ -180,7 +234,7 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleGenerateGroupMatches($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+        $this->handleGenerateGroupMatches($tournament, $this->superadminSectionRedirectPath((int) $tournament['id']));
     }
 
     public function generateGroupMatchesBySlug(): void
@@ -190,13 +244,13 @@ final class TournamentController extends BaseController
             return;
         }
 
-        $this->handleGenerateGroupMatches($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+        $this->handleGenerateGroupMatches($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
     /**
      * @param array<string, mixed> $tournament
      */
-    private function renderTournamentDetail(array $tournament, string $context): void
+    private function renderTournamentDetail(array $tournament, string $context, string $section): void
     {
         $tournamentId = (int) ($tournament['id'] ?? 0);
         $tournamentSlug = (string) ($tournament['slug'] ?? '');
@@ -211,15 +265,85 @@ final class TournamentController extends BaseController
         $hasGroupMatches = count($groupMatches) > 0;
 
         $isSlugContext = $context === 'tournament_admin';
+        $section = $this->normalizeSection($section);
+        $baseAdminPath = $isSlugContext
+            ? '/tournament/' . $tournamentSlug . '/admin'
+            : '/admin/tournament';
+
+        $sectionNav = [
+            'tournament' => $this->url($baseAdminPath . ($isSlugContext ? '' : '?id=' . $tournamentId)),
+            'groups' => $this->url($baseAdminPath . '/groups' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
+            'matches' => $this->url($baseAdminPath . '/matches' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
+            'teams' => $this->url($baseAdminPath . '/teams' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
+        ];
+
+        $groupFilterOptions = [];
+        foreach ($groups as $group) {
+            $groupId = (int) ($group['id'] ?? 0);
+            if ($groupId <= 0) {
+                continue;
+            }
+
+            $groupFilterOptions[$groupId] = (string) ($group['name'] ?? '');
+        }
+
+        $courtFilterSet = [];
+        $configuredCourtCount = (int) ($tournament['number_of_courts'] ?? 0);
+        for ($court = 1; $court <= $configuredCourtCount; $court++) {
+            $courtFilterSet[$court] = true;
+        }
+        foreach ($groupMatches as $match) {
+            $courtNumber = (int) ($match['court_number'] ?? 0);
+            if ($courtNumber > 0) {
+                $courtFilterSet[$courtNumber] = true;
+            }
+        }
+        ksort($courtFilterSet);
+        $courtFilterOptions = array_keys($courtFilterSet);
+
+        $selectedGroupFilter = $this->requestGetInt('group_id');
+        if ($selectedGroupFilter > 0 && !isset($groupFilterOptions[$selectedGroupFilter])) {
+            $selectedGroupFilter = 0;
+        }
+
+        $selectedCourtFilter = $this->requestGetInt('court');
+        if ($selectedCourtFilter > 0 && !isset($courtFilterSet[$selectedCourtFilter])) {
+            $selectedCourtFilter = 0;
+        }
+
+        $filteredGroupMatches = array_values(array_filter(
+            $groupMatches,
+            static function (array $match) use ($selectedGroupFilter, $selectedCourtFilter): bool {
+                $matchGroupId = (int) ($match['group_id'] ?? 0);
+                $matchCourt = (int) ($match['court_number'] ?? 0);
+                if ($selectedGroupFilter > 0 && $matchGroupId !== $selectedGroupFilter) {
+                    return false;
+                }
+                if ($selectedCourtFilter > 0 && $matchCourt !== $selectedCourtFilter) {
+                    return false;
+                }
+
+                return true;
+            }
+        ));
+
         $this->render('admin/tournament_detail', [
             'title' => 'Tournament detail',
             'tournament' => $tournament,
             'groups' => $groups,
             'teams' => $teams,
             'groupAssignment' => $groupAssignment,
-            'groupMatches' => $groupMatches,
+            'groupMatches' => $filteredGroupMatches,
+            'groupMatchesTotalCount' => count($groupMatches),
             'hasGroupMatches' => $hasGroupMatches,
             'matchModes' => self::MATCH_MODES,
+            'activeSection' => $section,
+            'sectionNav' => $sectionNav,
+            'matchesFilterActionUrl' => $sectionNav['matches'],
+            'groupFilterOptions' => $groupFilterOptions,
+            'courtFilterOptions' => $courtFilterOptions,
+            'selectedGroupFilter' => $selectedGroupFilter,
+            'selectedCourtFilter' => $selectedCourtFilter,
             'backUrl' => $isSlugContext ? null : $this->url('/admin/dashboard'),
             'backLabel' => 'Back to dashboard',
             'settingsActionUrl' => $isSlugContext
@@ -249,7 +373,12 @@ final class TournamentController extends BaseController
     /**
      * @param array<string, mixed> $tournament
      */
-    private function handleUpdate(array $tournament, string $redirectPath, bool $redirectByUpdatedSlug = false): void
+    private function handleUpdate(
+        array $tournament,
+        string $redirectPath,
+        bool $redirectByUpdatedSlug = false,
+        string $redirectSection = 'tournament'
+    ): void
     {
         $data = $this->collectTournamentInput();
         if ($data === null) {
@@ -277,7 +406,7 @@ final class TournamentController extends BaseController
 
         $successRedirectPath = $redirectPath;
         if ($redirectByUpdatedSlug) {
-            $successRedirectPath = '/tournament/' . (string) $data['slug'] . '/admin';
+            $successRedirectPath = $this->tournamentAdminSectionRedirectPath((string) $data['slug'], $redirectSection);
         }
 
         $this->setFlash('success', 'Tournament settings updated.');
@@ -940,5 +1069,42 @@ final class TournamentController extends BaseController
     ): DateTimeImmutable {
         $minutesToAdd = max(0, $slotIndex) * max(1, $matchDurationMinutes);
         return $startDateTime->add(new DateInterval('PT' . $minutesToAdd . 'M'));
+    }
+
+    private function normalizeSection(string $section): string
+    {
+        return in_array($section, self::ADMIN_SECTIONS, true) ? $section : 'tournament';
+    }
+
+    private function sectionFromRoute(): ?string
+    {
+        $section = $this->requestRouteString('section');
+        if ($section === '' || !in_array($section, self::ADMIN_SECTIONS, true)) {
+            return null;
+        }
+
+        return $section;
+    }
+
+    private function sectionFromPost(): string
+    {
+        return $this->normalizeSection($this->requestPostString('return_section'));
+    }
+
+    private function sectionPathSuffix(string $section): string
+    {
+        return $section === 'tournament' ? '' : '/' . $section;
+    }
+
+    private function superadminSectionRedirectPath(int $tournamentId, ?string $section = null): string
+    {
+        $targetSection = $section ?? $this->sectionFromPost();
+        return '/admin/tournament' . $this->sectionPathSuffix($targetSection) . '?id=' . $tournamentId;
+    }
+
+    private function tournamentAdminSectionRedirectPath(string $slug, ?string $section = null): string
+    {
+        $targetSection = $section ?? $this->sectionFromPost();
+        return '/tournament/' . $slug . '/admin' . $this->sectionPathSuffix($targetSection);
     }
 }
