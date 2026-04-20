@@ -24,16 +24,165 @@ final class TournamentController extends BaseController
 
         $tournamentModel = new TournamentModel($this->db());
         $tournament = $tournamentModel->findById($tournamentId);
-
         if ($tournament === null) {
             $this->setFlash('error', 'Tournament not found.');
             $this->redirect('/admin/dashboard');
         }
 
+        $this->renderTournamentDetail($tournament, 'superadmin');
+    }
+
+    public function detailBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $context = $this->currentSuperadmin() !== null ? 'superadmin' : 'tournament_admin';
+        $this->renderTournamentDetail($tournament, $context);
+    }
+
+    public function update(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleUpdate($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+    }
+
+    public function updateBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleUpdate($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin', true);
+    }
+
+    public function createTeam(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleCreateTeam($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+    }
+
+    public function createTeamBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleCreateTeam($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+    }
+
+    public function updateTeam(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleUpdateTeam($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+    }
+
+    public function updateTeamBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleUpdateTeam($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+    }
+
+    public function deleteTeam(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleDeleteTeam($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+    }
+
+    public function deleteTeamBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleDeleteTeam($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+    }
+
+    public function assignTeamGroup(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleAssignTeamGroup($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+    }
+
+    public function assignTeamGroupBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleAssignTeamGroup($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+    }
+
+    public function autoAssignTeams(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleAutoAssignTeams($tournament, '/admin/tournament?id=' . (int) $tournament['id']);
+    }
+
+    public function autoAssignTeamsBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleAutoAssignTeams($tournament, '/tournament/' . (string) $tournament['slug'] . '/admin');
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function renderTournamentDetail(array $tournament, string $context): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $tournamentSlug = (string) ($tournament['slug'] ?? '');
+        $tournamentModel = new TournamentModel($this->db());
         $teamModel = new TeamModel($this->db());
+
         $groups = $tournamentModel->groupsForTournament($tournamentId);
         $teams = $teamModel->allByTournament($tournamentId);
 
+        $isSlugContext = $context === 'tournament_admin';
         $this->render('admin/tournament_detail', [
             'title' => 'Tournament detail',
             'tournament' => $tournament,
@@ -41,163 +190,188 @@ final class TournamentController extends BaseController
             'teams' => $teams,
             'groupAssignment' => $this->buildGroupAssignmentViewData($groups, $teams),
             'matchModes' => self::MATCH_MODES,
+            'backUrl' => $isSlugContext ? null : $this->url('/admin/dashboard'),
+            'backLabel' => 'Back to dashboard',
+            'settingsActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/update')
+                : $this->url('/admin/tournament/update'),
+            'createTeamActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/teams/create')
+                : $this->url('/admin/tournament/teams/create'),
+            'updateTeamActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/teams/update')
+                : $this->url('/admin/tournament/teams/update'),
+            'deleteTeamActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/teams/delete')
+                : $this->url('/admin/tournament/teams/delete'),
+            'assignTeamActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/teams/assign')
+                : $this->url('/admin/tournament/teams/assign'),
+            'autoAssignTeamsActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/teams/assign-auto')
+                : $this->url('/admin/tournament/teams/assign-auto'),
         ]);
     }
 
-    public function update(): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleUpdate(array $tournament, string $redirectPath, bool $redirectByUpdatedSlug = false): void
     {
-        $this->requireSuperadminAuth();
-
-        $tournamentId = (int) $this->requestPostString('tournament_id');
-        if ($tournamentId <= 0) {
-            $this->setFlash('error', 'Invalid tournament selected.');
-            $this->redirect('/admin/dashboard');
-        }
-
         $data = $this->collectTournamentInput();
         if ($data === null) {
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $tournamentModel = new TournamentModel($this->db());
 
         try {
-            $tournamentModel->update($tournamentId, $data);
+            $tournamentModel->update((int) $tournament['id'], $data);
         } catch (Throwable $throwable) {
             $this->setFlash('error', 'Tournament could not be updated. Slug may already exist.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
             return;
         }
 
+        $currentTournamentAdmin = $this->currentTournamentAdmin();
+        if (is_array($currentTournamentAdmin) && (int) $currentTournamentAdmin['id'] === (int) $tournament['id']) {
+            $_SESSION['tournament_admin'] = [
+                'id' => (int) $tournament['id'],
+                'slug' => (string) $data['slug'],
+                'name' => (string) $data['name'],
+            ];
+        }
+
+        $successRedirectPath = $redirectPath;
+        if ($redirectByUpdatedSlug) {
+            $successRedirectPath = '/tournament/' . (string) $data['slug'] . '/admin';
+        }
+
         $this->setFlash('success', 'Tournament settings updated.');
-        $this->redirect('/admin/tournament?id=' . $tournamentId);
+        $this->redirect($successRedirectPath);
     }
 
-    public function createTeam(): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleCreateTeam(array $tournament, string $redirectPath): void
     {
-        $this->requireSuperadminAuth();
-
-        $tournamentId = (int) $this->requestPostString('tournament_id');
         $teamName = $this->requestPostString('team_name');
         $description = $this->requestPostString('description');
 
-        if ($tournamentId <= 0 || $teamName === '') {
+        if ($teamName === '') {
             $this->setFlash('error', 'Team name is required.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $teamModel = new TeamModel($this->db());
-        $teamModel->create($tournamentId, $teamName, $description);
+        $teamModel->create((int) $tournament['id'], $teamName, $description);
 
         $this->setFlash('success', 'Team added.');
-        $this->redirect('/admin/tournament?id=' . $tournamentId);
+        $this->redirect($redirectPath);
     }
 
-    public function updateTeam(): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleUpdateTeam(array $tournament, string $redirectPath): void
     {
-        $this->requireSuperadminAuth();
-
-        $tournamentId = (int) $this->requestPostString('tournament_id');
         $teamId = (int) $this->requestPostString('team_id');
         $teamName = $this->requestPostString('team_name');
         $description = $this->requestPostString('description');
 
-        if ($tournamentId <= 0 || $teamId <= 0 || $teamName === '') {
+        if ($teamId <= 0 || $teamName === '') {
             $this->setFlash('error', 'Team name is required.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $teamModel = new TeamModel($this->db());
-        $teamModel->update($teamId, $tournamentId, $teamName, $description);
+        $teamModel->update($teamId, (int) $tournament['id'], $teamName, $description);
 
         $this->setFlash('success', 'Team updated.');
-        $this->redirect('/admin/tournament?id=' . $tournamentId);
+        $this->redirect($redirectPath);
     }
 
-    public function deleteTeam(): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleDeleteTeam(array $tournament, string $redirectPath): void
     {
-        $this->requireSuperadminAuth();
-
-        $tournamentId = (int) $this->requestPostString('tournament_id');
         $teamId = (int) $this->requestPostString('team_id');
         $confirmation = $this->requestPostString('confirm_delete');
 
-        if ($tournamentId <= 0 || $teamId <= 0) {
+        if ($teamId <= 0) {
             $this->setFlash('error', 'Invalid team selected.');
-            $this->redirect('/admin/dashboard');
+            $this->redirect($redirectPath);
         }
 
         if ($confirmation !== '1') {
             $this->setFlash('error', 'Deletion confirmation is required.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $teamModel = new TeamModel($this->db());
-        $teamModel->delete($teamId, $tournamentId);
+        $teamModel->delete($teamId, (int) $tournament['id']);
 
         $this->setFlash('success', 'Team deleted.');
-        $this->redirect('/admin/tournament?id=' . $tournamentId);
+        $this->redirect($redirectPath);
     }
 
-    public function assignTeamGroup(): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleAssignTeamGroup(array $tournament, string $redirectPath): void
     {
-        $this->requireSuperadminAuth();
-
-        $tournamentId = (int) $this->requestPostString('tournament_id');
         $teamId = (int) $this->requestPostString('team_id');
         $groupIdRaw = $this->requestPostString('group_id');
         $groupId = $groupIdRaw === '' ? null : (int) $groupIdRaw;
 
-        if ($tournamentId <= 0 || $teamId <= 0) {
+        if ($teamId <= 0) {
             $this->setFlash('error', 'Invalid team selected.');
-            $this->redirect('/admin/dashboard');
+            $this->redirect($redirectPath);
         }
 
         $tournamentModel = new TournamentModel($this->db());
-        $groups = $tournamentModel->groupsForTournament($tournamentId);
+        $groups = $tournamentModel->groupsForTournament((int) $tournament['id']);
         $validGroupIds = $this->groupIdSet($groups);
 
         if ($groupId !== null && !isset($validGroupIds[$groupId])) {
             $this->setFlash('error', 'Invalid group selected.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $teamModel = new TeamModel($this->db());
-        $teamModel->updateGroupAssignment($teamId, $tournamentId, $groupId);
+        $teamModel->updateGroupAssignment($teamId, (int) $tournament['id'], $groupId);
 
         $this->setFlash('success', 'Team assignment updated.');
-        $this->redirect('/admin/tournament?id=' . $tournamentId);
+        $this->redirect($redirectPath);
     }
 
-    public function autoAssignTeams(): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleAutoAssignTeams(array $tournament, string $redirectPath): void
     {
-        $this->requireSuperadminAuth();
-
-        $tournamentId = (int) $this->requestPostString('tournament_id');
-        if ($tournamentId <= 0) {
-            $this->setFlash('error', 'Invalid tournament selected.');
-            $this->redirect('/admin/dashboard');
-        }
-
         $overwriteConfirmed = $this->requestPostString('confirm_overwrite') === '1';
+        $tournamentId = (int) $tournament['id'];
 
         $tournamentModel = new TournamentModel($this->db());
         $groups = $tournamentModel->groupsForTournament($tournamentId);
         if (count($groups) === 0) {
             $this->setFlash('error', 'No groups available for this tournament.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $teamModel = new TeamModel($this->db());
         $teams = $teamModel->allByTournament($tournamentId);
         if (count($teams) === 0) {
             $this->setFlash('error', 'No teams available to assign.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         if ($teamModel->hasAnyAssignedTeam($tournamentId) && !$overwriteConfirmed) {
             $this->setFlash('error', 'Some teams already have a group. Confirm overwrite to continue.');
-            $this->redirect('/admin/tournament?id=' . $tournamentId);
+            $this->redirect($redirectPath);
         }
 
         $teamIds = [];
@@ -234,7 +408,64 @@ final class TournamentController extends BaseController
         $teamModel->bulkUpdateGroupAssignments($tournamentId, $assignments);
 
         $this->setFlash('success', 'Teams were automatically assigned to groups.');
-        $this->redirect('/admin/tournament?id=' . $tournamentId);
+        $this->redirect($redirectPath);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveTournamentByPostForSuperadmin(): ?array
+    {
+        $tournamentId = (int) $this->requestPostString('tournament_id');
+        if ($tournamentId <= 0) {
+            $this->setFlash('error', 'Invalid tournament selected.');
+            $this->redirect('/admin/dashboard');
+        }
+
+        $tournamentModel = new TournamentModel($this->db());
+        $tournament = $tournamentModel->findById($tournamentId);
+        if ($tournament === null) {
+            $this->setFlash('error', 'Tournament not found.');
+            $this->redirect('/admin/dashboard');
+        }
+
+        return $tournament;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveTournamentBySlugWithAdminAccess(): ?array
+    {
+        $slug = $this->requestRouteString('slug');
+        if ($slug === '') {
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '404 Not Found';
+            return null;
+        }
+
+        $tournamentModel = new TournamentModel($this->db());
+        $tournament = $tournamentModel->findBySlug($slug);
+        if ($tournament === null) {
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '404 Not Found';
+            return null;
+        }
+
+        if ($this->currentSuperadmin() !== null) {
+            return $tournament;
+        }
+
+        $tournamentAdmin = $this->currentTournamentAdmin();
+        if (is_array($tournamentAdmin) && (int) $tournamentAdmin['id'] === (int) $tournament['id']) {
+            return $tournament;
+        }
+
+        $this->setFlash('error', 'Please sign in as tournament admin.');
+        $this->redirect('/tournament/' . $slug . '/login');
+        return null;
     }
 
     /**

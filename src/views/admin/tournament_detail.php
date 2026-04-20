@@ -14,12 +14,24 @@ declare(strict_types=1);
  *     unassigned_teams: list<array<string, mixed>>
  * } $groupAssignment */
 /** @var list<string> $matchModes */
+/** @var string|null $backUrl */
+/** @var string $backLabel */
+/** @var string $settingsActionUrl */
+/** @var string $createTeamActionUrl */
+/** @var string $updateTeamActionUrl */
+/** @var string $deleteTeamActionUrl */
+/** @var string $assignTeamActionUrl */
+/** @var string $autoAssignTeamsActionUrl */
 
 $tournamentId = (int) ($tournament['id'] ?? 0);
+$backUrl = isset($backUrl) && is_string($backUrl) && $backUrl !== '' ? $backUrl : null;
+$backLabel = isset($backLabel) && is_string($backLabel) && $backLabel !== '' ? $backLabel : 'Back to dashboard';
 ?>
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <h1 class="h4 m-0">Tournament detail</h1>
-    <a href="<?= htmlspecialchars($url('/admin/dashboard'), ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-secondary btn-sm">Back to dashboard</a>
+    <?php if ($backUrl !== null): ?>
+        <a href="<?= htmlspecialchars($backUrl, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-secondary btn-sm"><?= htmlspecialchars($backLabel, ENT_QUOTES, 'UTF-8') ?></a>
+    <?php endif; ?>
 </div>
 
 <div class="row g-3">
@@ -32,7 +44,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
             </div>
             <div id="settingsCollapse" class="collapse show">
                 <div class="card-body">
-                    <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/update'), ENT_QUOTES, 'UTF-8') ?>">
+                    <form method="post" action="<?= htmlspecialchars($settingsActionUrl, ENT_QUOTES, 'UTF-8') ?>">
                         <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                         <div class="mb-2">
                             <label for="name" class="form-label">Name</label>
@@ -128,7 +140,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
                         </div>
                     </div>
 
-                    <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/teams/assign-auto'), ENT_QUOTES, 'UTF-8') ?>" onsubmit="return confirm('Automatically assign all teams and overwrite current assignments?');" class="mb-3">
+                    <form method="post" action="<?= htmlspecialchars($autoAssignTeamsActionUrl, ENT_QUOTES, 'UTF-8') ?>" onsubmit="return confirm('Automatically assign all teams and overwrite current assignments?');" class="mb-3">
                         <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                         <input type="hidden" name="confirm_overwrite" value="1">
                         <button type="submit" class="btn btn-outline-primary btn-sm">Automatically assign teams to groups</button>
@@ -153,7 +165,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
                                 <div class="d-flex flex-column gap-2">
                                     <?php foreach ($groupTeams as $team): ?>
                                         <?php $teamId = (int) ($team['id'] ?? 0); ?>
-                                        <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/teams/assign'), ENT_QUOTES, 'UTF-8') ?>" class="row g-2 align-items-center">
+                                        <form method="post" action="<?= htmlspecialchars($assignTeamActionUrl, ENT_QUOTES, 'UTF-8') ?>" class="row g-2 align-items-center">
                                             <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                                             <input type="hidden" name="team_id" value="<?= $teamId ?>">
                                             <div class="col-12 col-md-6">
@@ -191,7 +203,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
                         <div class="d-flex flex-column gap-2">
                             <?php foreach ($groupAssignment['unassigned_teams'] as $team): ?>
                                 <?php $teamId = (int) ($team['id'] ?? 0); ?>
-                                <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/teams/assign'), ENT_QUOTES, 'UTF-8') ?>" class="row g-2 align-items-center">
+                                <form method="post" action="<?= htmlspecialchars($assignTeamActionUrl, ENT_QUOTES, 'UTF-8') ?>" class="row g-2 align-items-center">
                                     <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                                     <input type="hidden" name="team_id" value="<?= $teamId ?>">
                                     <div class="col-12 col-md-6">
@@ -227,7 +239,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
             </div>
             <div id="addTeamCollapse" class="collapse show">
                 <div class="card-body">
-                    <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/teams/create'), ENT_QUOTES, 'UTF-8') ?>" class="mb-0">
+                    <form method="post" action="<?= htmlspecialchars($createTeamActionUrl, ENT_QUOTES, 'UTF-8') ?>" class="mb-0">
                         <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                         <div class="mb-2">
                             <label for="team_name_new" class="form-label">Team name</label>
@@ -258,7 +270,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
                         <?php foreach ($teams as $team): ?>
                             <?php $teamId = (int) ($team['id'] ?? 0); ?>
                             <div class="border rounded p-2 bg-light-subtle">
-                                <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/teams/update'), ENT_QUOTES, 'UTF-8') ?>">
+                                <form method="post" action="<?= htmlspecialchars($updateTeamActionUrl, ENT_QUOTES, 'UTF-8') ?>">
                                     <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                                     <input type="hidden" name="team_id" value="<?= $teamId ?>">
                                     <div class="mb-2">
@@ -272,7 +284,7 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
                                     <button type="submit" class="btn btn-sm btn-primary">Save</button>
                                 </form>
                                 <div class="d-flex gap-2">
-                                    <form method="post" action="<?= htmlspecialchars($url('/admin/tournament/teams/delete'), ENT_QUOTES, 'UTF-8') ?>" onsubmit="return confirm('Delete this team?');">
+                                    <form method="post" action="<?= htmlspecialchars($deleteTeamActionUrl, ENT_QUOTES, 'UTF-8') ?>" onsubmit="return confirm('Delete this team?');">
                                         <input type="hidden" name="tournament_id" value="<?= $tournamentId ?>">
                                         <input type="hidden" name="team_id" value="<?= $teamId ?>">
                                         <input type="hidden" name="confirm_delete" value="1">

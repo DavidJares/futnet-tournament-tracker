@@ -6,6 +6,7 @@ use App\Controllers\HomeController;
 use App\Controllers\SetupController;
 use App\Controllers\AuthController;
 use App\Controllers\AdminDashboardController;
+use App\Controllers\TournamentAdminAuthController;
 use App\Controllers\TournamentController;
 use App\Router;
 
@@ -17,6 +18,7 @@ $homeController = new HomeController($services);
 $setupController = new SetupController($services);
 $authController = new AuthController($services);
 $adminDashboardController = new AdminDashboardController($services);
+$tournamentAdminAuthController = new TournamentAdminAuthController($services);
 $tournamentController = new TournamentController($services);
 
 $router->get('/', [$homeController, 'index']);
@@ -38,6 +40,17 @@ $router->post('/admin/tournament/teams/update', [$tournamentController, 'updateT
 $router->post('/admin/tournament/teams/delete', [$tournamentController, 'deleteTeam']);
 $router->post('/admin/tournament/teams/assign', [$tournamentController, 'assignTeamGroup']);
 $router->post('/admin/tournament/teams/assign-auto', [$tournamentController, 'autoAssignTeams']);
+
+$router->get('/tournament/{slug}/login', [$tournamentAdminAuthController, 'loginForm']);
+$router->post('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login']);
+$router->post('/tournament/{slug}/logout', [$tournamentAdminAuthController, 'logout']);
+$router->get('/tournament/{slug}/admin', [$tournamentController, 'detailBySlug']);
+$router->post('/tournament/{slug}/admin/update', [$tournamentController, 'updateBySlug']);
+$router->post('/tournament/{slug}/admin/teams/create', [$tournamentController, 'createTeamBySlug']);
+$router->post('/tournament/{slug}/admin/teams/update', [$tournamentController, 'updateTeamBySlug']);
+$router->post('/tournament/{slug}/admin/teams/delete', [$tournamentController, 'deleteTeamBySlug']);
+$router->post('/tournament/{slug}/admin/teams/assign', [$tournamentController, 'assignTeamGroupBySlug']);
+$router->post('/tournament/{slug}/admin/teams/assign-auto', [$tournamentController, 'autoAssignTeamsBySlug']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

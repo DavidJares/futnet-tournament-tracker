@@ -34,6 +34,7 @@ abstract class BaseController
         $config = $this->services['config'] ?? [];
         $flash = $this->pullFlash();
         $currentSuperadmin = $this->currentSuperadmin();
+        $currentTournamentAdmin = $this->currentTournamentAdmin();
         $url = fn (string $path = '/'): string => $this->url($path);
         extract($data, EXTR_SKIP);
 
@@ -178,5 +179,41 @@ abstract class BaseController
 
         $this->setFlash('error', 'Please sign in as superadmin.');
         $this->redirect('/admin/login');
+    }
+
+    protected function requestRouteString(string $key): string
+    {
+        $routeParams = $_SERVER['_route_params'] ?? null;
+        if (!is_array($routeParams)) {
+            return '';
+        }
+
+        $value = $routeParams[$key] ?? '';
+        return is_string($value) ? trim($value) : '';
+    }
+
+    /**
+     * @return array{id: int, slug: string, name: string}|null
+     */
+    protected function currentTournamentAdmin(): ?array
+    {
+        $sessionData = $_SESSION['tournament_admin'] ?? null;
+        if (!is_array($sessionData)) {
+            return null;
+        }
+
+        $id = $sessionData['id'] ?? 0;
+        $slug = $sessionData['slug'] ?? '';
+        $name = $sessionData['name'] ?? '';
+
+        if (!is_int($id) || $id <= 0 || !is_string($slug) || $slug === '' || !is_string($name) || $name === '') {
+            return null;
+        }
+
+        return [
+            'id' => $id,
+            'slug' => $slug,
+            'name' => $name,
+        ];
     }
 }

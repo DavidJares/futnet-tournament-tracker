@@ -77,6 +77,12 @@ docs/
   - automatic balanced random assignment across groups
   - manual reassignment per team via dropdown
   - summary of total teams, groups, teams per group, and unassigned count
+- Tournament admin slug-based access
+  - login at `/tournament/{slug}/login` with tournament password
+  - protected tournament admin page at `/tournament/{slug}/admin`
+  - tournament admin session is bound to one specific tournament
+  - tournament admin logout at `POST /tournament/{slug}/logout`
+  - superadmin session remains separate and unchanged
 
 ## Database Schema (Migrations)
 

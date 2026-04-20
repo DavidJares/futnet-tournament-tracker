@@ -113,6 +113,52 @@ final class TournamentModel
     }
 
     /**
+     * @return array<string, mixed>|null
+     */
+    public function findBySlug(string $slug): ?array
+    {
+        $pdo = $this->database->pdo();
+        $statement = $pdo->prepare(
+            'SELECT id, name, slug, event_date, location, number_of_groups, number_of_courts,
+                    match_duration_minutes, advancing_teams_count, match_mode, created_at, updated_at
+             FROM tournaments
+             WHERE slug = :slug
+             LIMIT 1'
+        );
+        $statement->execute(['slug' => $slug]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($row) ? $row : null;
+    }
+
+    /**
+     * @return array{id: int, name: string, slug: string, admin_password_hash: string}|null
+     */
+    public function findAuthBySlug(string $slug): ?array
+    {
+        $pdo = $this->database->pdo();
+        $statement = $pdo->prepare(
+            'SELECT id, name, slug, admin_password_hash
+             FROM tournaments
+             WHERE slug = :slug
+             LIMIT 1'
+        );
+        $statement->execute(['slug' => $slug]);
+        $row = $statement->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($row)) {
+            return null;
+        }
+
+        return [
+            'id' => (int) ($row['id'] ?? 0),
+            'name' => (string) ($row['name'] ?? ''),
+            'slug' => (string) ($row['slug'] ?? ''),
+            'admin_password_hash' => (string) ($row['admin_password_hash'] ?? ''),
+        ];
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public function update(int $id, array $data): void

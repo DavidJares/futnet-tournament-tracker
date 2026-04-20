@@ -6,6 +6,14 @@ $pageTitle = isset($title) && is_string($title) ? $title : 'FTT';
 $appName = (string) ($config['app']['name'] ?? 'FTT');
 $flashType = is_array($flash ?? null) ? (string) ($flash['type'] ?? '') : '';
 $flashMessage = is_array($flash ?? null) ? (string) ($flash['message'] ?? '') : '';
+$brandHref = $url('/');
+
+if (is_array($currentSuperadmin ?? null)) {
+    $brandHref = $url('/admin/dashboard');
+} elseif (is_array($currentTournamentAdmin ?? null)) {
+    $brandHref = $url('/tournament/' . (string) ($currentTournamentAdmin['slug'] ?? '') . '/admin');
+}
+
 $alertClass = 'alert-info';
 if ($flashType === 'success') {
     $alertClass = 'alert-success';
@@ -25,11 +33,16 @@ if ($flashType === 'error') {
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
     <div class="container-fluid">
-        <a class="navbar-brand" href="<?= htmlspecialchars($url('/admin/dashboard'), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></a>
+        <a class="navbar-brand" href="<?= htmlspecialchars($brandHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></a>
         <div class="d-flex align-items-center gap-2 ms-auto">
             <?php if (is_array($currentSuperadmin ?? null)): ?>
                 <span class="text-light small"><?= htmlspecialchars((string) $currentSuperadmin['username'], ENT_QUOTES, 'UTF-8') ?></span>
                 <form method="post" action="<?= htmlspecialchars($url('/admin/logout'), ENT_QUOTES, 'UTF-8') ?>" class="m-0">
+                    <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
+                </form>
+            <?php elseif (is_array($currentTournamentAdmin ?? null)): ?>
+                <span class="text-light small"><?= htmlspecialchars((string) ($currentTournamentAdmin['name'] ?? 'Tournament admin'), ENT_QUOTES, 'UTF-8') ?></span>
+                <form method="post" action="<?= htmlspecialchars($url('/tournament/' . (string) ($currentTournamentAdmin['slug'] ?? '') . '/logout'), ENT_QUOTES, 'UTF-8') ?>" class="m-0">
                     <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
                 </form>
             <?php endif; ?>
