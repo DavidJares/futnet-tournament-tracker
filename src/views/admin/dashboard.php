@@ -36,13 +36,17 @@ declare(strict_types=1);
                             $name = (string) ($tournament['name'] ?? '');
                             $slug = (string) ($tournament['slug'] ?? '');
                             $eventDate = (string) ($tournament['event_date'] ?? '');
-                            $mode = (string) ($tournament['match_mode'] ?? '');
+                            $groupMode = (string) ($tournament['group_stage_mode'] ?? ($tournament['match_mode'] ?? ''));
+                            $knockoutMode = (string) ($tournament['knockout_mode'] ?? 'best_of_3');
                             ?>
                             <tr>
                                 <td><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><code><?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?></code></td>
                                 <td><?= htmlspecialchars($eventDate !== '' ? $eventDate : '-', ENT_QUOTES, 'UTF-8') ?></td>
-                                <td><span class="badge bg-secondary"><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></span></td>
+                                <td>
+                                    <span class="badge bg-secondary">G: <?= htmlspecialchars($groupMode, ENT_QUOTES, 'UTF-8') ?></span>
+                                    <span class="badge bg-dark">KO: <?= htmlspecialchars($knockoutMode, ENT_QUOTES, 'UTF-8') ?></span>
+                                </td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars($url('/admin/tournament?id=' . $tournamentId), ENT_QUOTES, 'UTF-8') ?>">Detail</a>
                                     <form method="post" action="<?= htmlspecialchars($url('/admin/tournaments/delete'), ENT_QUOTES, 'UTF-8') ?>" class="d-inline" onsubmit="return confirm('Delete this tournament and all related data?');">
@@ -67,11 +71,15 @@ declare(strict_types=1);
                 <form method="post" action="<?= htmlspecialchars($url('/admin/tournaments/create'), ENT_QUOTES, 'UTF-8') ?>">
                     <div class="mb-2">
                         <label for="name" class="form-label">Name</label>
-                        <input type="text" class="form-control" name="name" id="name" required maxlength="150">
+                        <input type="text" class="form-control" name="name" id="name" required maxlength="150" autocomplete="off">
                     </div>
                     <div class="mb-2">
                         <label for="slug" class="form-label">Slug</label>
-                        <input type="text" class="form-control" name="slug" id="slug" required pattern="[a-z0-9-]+" maxlength="150">
+                        <div class="input-group">
+                            <input type="text" class="form-control" name="slug" id="slug" readonly maxlength="150">
+                            <button type="button" class="btn btn-outline-secondary js-copy-slug" data-copy-target="slug">Copy</button>
+                        </div>
+                        <div class="form-text">Auto-generated from tournament name. Unique suffix will be added automatically if needed.</div>
                     </div>
                     <div class="mb-2">
                         <label for="event_date" class="form-label">Event date</label>
@@ -110,10 +118,18 @@ declare(strict_types=1);
                         </div>
                     </div>
                     <div class="mt-2 mb-3">
-                        <label for="match_mode" class="form-label">Match mode</label>
-                        <select class="form-select" name="match_mode" id="match_mode" required>
+                        <label for="group_stage_mode" class="form-label">Group stage mode</label>
+                        <select class="form-select" name="group_stage_mode" id="group_stage_mode" required>
                             <?php foreach ($matchModes as $mode): ?>
-                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></option>
+                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>" <?= $mode === 'fixed_2_sets' ? 'selected' : '' ?>><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mt-2 mb-3">
+                        <label for="knockout_mode" class="form-label">Knockout mode</label>
+                        <select class="form-select" name="knockout_mode" id="knockout_mode" required>
+                            <?php foreach ($matchModes as $mode): ?>
+                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>" <?= $mode === 'best_of_3' ? 'selected' : '' ?>><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -123,3 +139,44 @@ declare(strict_types=1);
         </div>
     </div>
 </div>
+<script>
+    (function () {
+        var nameInput = document.getElementById('name');
+        var slugInput = document.getElementById('slug');
+        if (nameInput && slugInput) {
+            var slugify = function (value) {
+                var normalized = value.toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '')
+                    .replace(/-+/g, '-');
+                return normalized;
+            };
+            var syncSlug = function () {
+                slugInput.value = slugify(nameInput.value || '');
+            };
+            nameInput.addEventListener('input', syncSlug);
+            syncSlug();
+        }
+
+        document.querySelectorAll('.js-copy-slug').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var targetId = button.getAttribute('data-copy-target');
+                if (!targetId) {
+                    return;
+                }
+                var input = document.getElementById(targetId);
+                if (!input) {
+                    return;
+                }
+                var value = input.value || '';
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(value);
+                    return;
+                }
+                input.focus();
+                input.select();
+                document.execCommand('copy');
+            });
+        });
+    })();
+</script>

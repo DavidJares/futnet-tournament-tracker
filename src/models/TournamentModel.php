@@ -23,7 +23,7 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->query(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
-                    match_duration_minutes, advancing_teams_count, match_mode, created_at
+                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode, created_at
              FROM tournaments
              ORDER BY created_at DESC, id DESC'
         );
@@ -56,6 +56,8 @@ final class TournamentModel
                 number_of_courts,
                 match_duration_minutes,
                 advancing_teams_count,
+                group_stage_mode,
+                knockout_mode,
                 match_mode,
                 created_at,
                 updated_at
@@ -70,6 +72,8 @@ final class TournamentModel
                 :number_of_courts,
                 :match_duration_minutes,
                 :advancing_teams_count,
+                :group_stage_mode,
+                :knockout_mode,
                 :match_mode,
                 NOW(),
                 NOW()
@@ -87,7 +91,9 @@ final class TournamentModel
             'number_of_courts' => (int) $data['number_of_courts'],
             'match_duration_minutes' => (int) $data['match_duration_minutes'],
             'advancing_teams_count' => (int) $data['advancing_teams_count'],
-            'match_mode' => (string) $data['match_mode'],
+            'group_stage_mode' => (string) $data['group_stage_mode'],
+            'knockout_mode' => (string) $data['knockout_mode'],
+            'match_mode' => (string) $data['group_stage_mode'],
         ]);
 
         $tournamentId = (int) $pdo->lastInsertId();
@@ -104,7 +110,7 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
-                    match_duration_minutes, advancing_teams_count, match_mode, created_at, updated_at
+                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode, created_at, updated_at
              FROM tournaments
              WHERE id = :id
              LIMIT 1'
@@ -123,7 +129,7 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
-                    match_duration_minutes, advancing_teams_count, match_mode, created_at, updated_at
+                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode, created_at, updated_at
              FROM tournaments
              WHERE slug = :slug
              LIMIT 1'
@@ -179,7 +185,9 @@ final class TournamentModel
             'number_of_courts' => (int) $data['number_of_courts'],
             'match_duration_minutes' => (int) $data['match_duration_minutes'],
             'advancing_teams_count' => (int) $data['advancing_teams_count'],
-            'match_mode' => (string) $data['match_mode'],
+            'group_stage_mode' => (string) $data['group_stage_mode'],
+            'knockout_mode' => (string) $data['knockout_mode'],
+            'match_mode' => (string) $data['group_stage_mode'],
         ];
 
         $passwordClause = '';
@@ -205,6 +213,8 @@ final class TournamentModel
                  number_of_courts = :number_of_courts,
                  match_duration_minutes = :match_duration_minutes,
                  advancing_teams_count = :advancing_teams_count,
+                 group_stage_mode = :group_stage_mode,
+                 knockout_mode = :knockout_mode,
                  match_mode = :match_mode,
                  updated_at = NOW()' . $passwordClause . '
              WHERE id = :id'
@@ -220,6 +230,23 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare('DELETE FROM tournaments WHERE id = :id');
         $statement->execute(['id' => $id]);
+    }
+
+    public function generateUniqueSlug(string $name, ?int $excludeTournamentId = null): string
+    {
+        $base = self::slugify($name);
+        if ($base === '') {
+            $base = 'tournament';
+        }
+
+        $slug = $base;
+        $suffix = 2;
+        while ($this->slugExists($slug, $excludeTournamentId)) {
+            $slug = $base . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $slug;
     }
 
     /**
@@ -328,6 +355,58 @@ final class TournamentModel
         }
 
         return $result;
+    }
+
+    private function slugExists(string $slug, ?int $excludeTournamentId = null): bool
+    {
+        $pdo = $this->database->pdo();
+        if ($excludeTournamentId !== null && $excludeTournamentId > 0) {
+            $statement = $pdo->prepare(
+                'SELECT 1
+                 FROM tournaments
+                 WHERE slug = :slug
+                   AND id <> :exclude_id
+                 LIMIT 1'
+            );
+            $statement->execute([
+                'slug' => $slug,
+                'exclude_id' => $excludeTournamentId,
+            ]);
+            return $statement->fetchColumn() !== false;
+        }
+
+        $statement = $pdo->prepare(
+            'SELECT 1
+             FROM tournaments
+             WHERE slug = :slug
+             LIMIT 1'
+        );
+        $statement->execute(['slug' => $slug]);
+
+        return $statement->fetchColumn() !== false;
+    }
+
+    private static function slugify(string $value): string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        $normalized = $value;
+        if (function_exists('iconv')) {
+            $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+            if (is_string($converted) && $converted !== '') {
+                $normalized = $converted;
+            }
+        }
+
+        $normalized = strtolower($normalized);
+        $normalized = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
+        $normalized = trim($normalized, '-');
+        $normalized = preg_replace('/-+/', '-', $normalized) ?? '';
+
+        return $normalized;
     }
 
     private function nullIfEmpty(string $value): ?string

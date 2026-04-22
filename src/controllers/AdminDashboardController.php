@@ -35,6 +35,7 @@ final class AdminDashboardController extends BaseController
         }
 
         $tournamentModel = new TournamentModel($this->db());
+        $data['slug'] = $tournamentModel->generateUniqueSlug((string) $data['name']);
 
         try {
             $tournamentId = $tournamentModel->create($data);
@@ -77,7 +78,6 @@ final class AdminDashboardController extends BaseController
     private function collectTournamentInput(bool $requirePassword): ?array
     {
         $name = $this->requestPostString('name');
-        $slug = $this->requestPostString('slug');
         $eventDate = $this->requestPostString('event_date');
         $startTimeRaw = $this->requestPostString('start_time');
         $startTime = $this->normalizeTimeHHMMOrEmpty($startTimeRaw);
@@ -87,15 +87,11 @@ final class AdminDashboardController extends BaseController
         $numberOfCourts = (int) $this->requestPostString('number_of_courts');
         $matchDurationMinutes = (int) $this->requestPostString('match_duration_minutes');
         $advancingTeamsCount = (int) $this->requestPostString('advancing_teams_count');
-        $matchMode = $this->requestPostString('match_mode');
+        $groupStageMode = $this->requestPostString('group_stage_mode');
+        $knockoutMode = $this->requestPostString('knockout_mode');
 
-        if ($name === '' || $slug === '') {
-            $this->setFlash('error', 'Tournament name and slug are required.');
-            return null;
-        }
-
-        if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
-            $this->setFlash('error', 'Slug must contain only lowercase letters, numbers and dashes.');
+        if ($name === '') {
+            $this->setFlash('error', 'Tournament name is required.');
             return null;
         }
 
@@ -139,14 +135,18 @@ final class AdminDashboardController extends BaseController
             return null;
         }
 
-        if (!in_array($matchMode, self::MATCH_MODES, true)) {
-            $this->setFlash('error', 'Invalid match mode selected.');
+        if (!in_array($groupStageMode, self::MATCH_MODES, true)) {
+            $this->setFlash('error', 'Invalid group stage mode selected.');
+            return null;
+        }
+
+        if (!in_array($knockoutMode, self::MATCH_MODES, true)) {
+            $this->setFlash('error', 'Invalid knockout mode selected.');
             return null;
         }
 
         return [
             'name' => $name,
-            'slug' => $slug,
             'event_date' => $eventDate,
             'start_time' => $startTime,
             'location' => $location,
@@ -155,7 +155,8 @@ final class AdminDashboardController extends BaseController
             'number_of_courts' => $numberOfCourts,
             'match_duration_minutes' => $matchDurationMinutes,
             'advancing_teams_count' => $advancingTeamsCount,
-            'match_mode' => $matchMode,
+            'group_stage_mode' => $groupStageMode,
+            'knockout_mode' => $knockoutMode,
         ];
     }
 }

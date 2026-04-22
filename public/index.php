@@ -46,6 +46,9 @@ $router->get('/admin/tournament/matches/{matchId}', [$tournamentController, 'gro
 $router->post('/admin/tournament/matches/{matchId}/start', [$tournamentController, 'startGroupMatch']);
 $router->post('/admin/tournament/matches/{matchId}/score', [$tournamentController, 'saveGroupMatchScore']);
 $router->post('/admin/tournament/matches/{matchId}/reset', [$tournamentController, 'resetGroupMatchResult']);
+$router->post('/admin/tournament/knockout/generate', [$tournamentController, 'generateKnockoutMatches']);
+$router->get('/admin/tournament/knockout/{matchId}', [$tournamentController, 'knockoutMatchDetail']);
+$router->post('/admin/tournament/knockout/{matchId}/score', [$tournamentController, 'saveKnockoutMatchScore']);
 
 $router->get('/tournament/{slug}/login', [$tournamentAdminAuthController, 'loginForm']);
 $router->post('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login']);
@@ -63,6 +66,9 @@ $router->get('/tournament/{slug}/admin/matches/{matchId}', [$tournamentControlle
 $router->post('/tournament/{slug}/admin/matches/{matchId}/start', [$tournamentController, 'startGroupMatchBySlug']);
 $router->post('/tournament/{slug}/admin/matches/{matchId}/score', [$tournamentController, 'saveGroupMatchScoreBySlug']);
 $router->post('/tournament/{slug}/admin/matches/{matchId}/reset', [$tournamentController, 'resetGroupMatchResultBySlug']);
+$router->post('/tournament/{slug}/admin/knockout/generate', [$tournamentController, 'generateKnockoutMatchesBySlug']);
+$router->get('/tournament/{slug}/admin/knockout/{matchId}', [$tournamentController, 'knockoutMatchDetailBySlug']);
+$router->post('/tournament/{slug}/admin/knockout/{matchId}/score', [$tournamentController, 'saveKnockoutMatchScoreBySlug']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

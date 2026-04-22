@@ -11,7 +11,8 @@ declare(strict_types=1);
 $sectionLabels = [
     'tournament' => 'Tournament',
     'groups' => 'Groups',
-    'matches' => 'Matches',
+    'matches' => 'Group Stage',
+    'knockout' => 'Knockout',
     'teams' => 'Teams',
 ];
 ?>

@@ -14,7 +14,7 @@ use Throwable;
 final class TournamentController extends BaseController
 {
     private const MATCH_MODES = ['fixed_2_sets', 'best_of_3'];
-    private const ADMIN_SECTIONS = ['tournament', 'groups', 'matches', 'teams'];
+    private const ADMIN_SECTIONS = ['tournament', 'groups', 'matches', 'knockout', 'teams'];
 
     public function detail(): void
     {
@@ -247,6 +247,27 @@ final class TournamentController extends BaseController
         $this->handleGenerateGroupMatches($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug']));
     }
 
+    public function generateKnockoutMatches(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleGenerateKnockoutMatches($tournament, $this->superadminSectionRedirectPath((int) $tournament['id'], 'knockout'));
+    }
+
+    public function generateKnockoutMatchesBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleGenerateKnockoutMatches($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'knockout'));
+    }
+
     public function groupMatchDetail(): void
     {
         $this->requireSuperadminAuth();
@@ -281,6 +302,40 @@ final class TournamentController extends BaseController
 
         $filters = $this->filtersFromGet();
         $this->renderGroupMatchDetail($tournament, $matchId, true, $filters);
+    }
+
+    public function knockoutMatchDetail(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $tournament = $this->resolveTournamentByQueryForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->superadminSectionRedirectPath((int) $tournament['id'], 'knockout'));
+        }
+
+        $this->renderKnockoutMatchDetail($tournament, $matchId, false);
+    }
+
+    public function knockoutMatchDetailBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'knockout'));
+        }
+
+        $this->renderKnockoutMatchDetail($tournament, $matchId, true);
     }
 
     public function startGroupMatch(): void
@@ -403,6 +458,44 @@ final class TournamentController extends BaseController
         $this->handleResetGroupMatchResult($tournament, $matchId, $redirectPath);
     }
 
+    public function saveKnockoutMatchScore(): void
+    {
+        $this->requireSuperadminAuth();
+
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->superadminSectionRedirectPath((int) $tournament['id'], 'knockout'));
+        }
+
+        $redirectPath = $this->superadminKnockoutMatchDetailPath((int) $tournament['id'], $matchId);
+        $successRedirectPath = $this->superadminSectionRedirectPath((int) $tournament['id'], 'knockout');
+        $this->handleSaveKnockoutMatchScore($tournament, $matchId, $redirectPath, $successRedirectPath);
+    }
+
+    public function saveKnockoutMatchScoreBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $matchId = $this->matchIdFromRoute();
+        if ($matchId <= 0) {
+            $this->setFlash('error', 'Invalid match selected.');
+            $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'knockout'));
+        }
+
+        $redirectPath = $this->tournamentAdminKnockoutMatchDetailPath((string) $tournament['slug'], $matchId);
+        $successRedirectPath = $this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'knockout');
+        $this->handleSaveKnockoutMatchScore($tournament, $matchId, $redirectPath, $successRedirectPath);
+    }
+
     /**
      * @param array<string, mixed> $tournament
      */
@@ -418,6 +511,7 @@ final class TournamentController extends BaseController
         $teams = $teamModel->allByTournament($tournamentId);
         $groupAssignment = $this->buildGroupAssignmentViewData($groups, $teams);
         $groupMatches = $matchModel->groupMatchesForTournament($tournamentId);
+        $knockoutMatches = $matchModel->knockoutMatchesForTournament($tournamentId);
         $finishedGroupMatches = $matchModel->finishedGroupMatchesForTournament($tournamentId);
         $finishedMatchIds = array_values(array_filter(
             array_map(
@@ -432,9 +526,10 @@ final class TournamentController extends BaseController
             $teams,
             $finishedGroupMatches,
             $setsByMatchId,
-            (string) ($tournament['match_mode'] ?? '')
+            (string) ($tournament['group_stage_mode'] ?? ($tournament['match_mode'] ?? ''))
         );
         $hasGroupMatches = count($groupMatches) > 0;
+        $hasKnockoutMatches = count($knockoutMatches) > 0;
 
         $isSlugContext = $context === 'tournament_admin';
         $section = $this->normalizeSection($section);
@@ -446,6 +541,7 @@ final class TournamentController extends BaseController
             'tournament' => $this->url($baseAdminPath . ($isSlugContext ? '' : '?id=' . $tournamentId)),
             'groups' => $this->url($baseAdminPath . '/groups' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
             'matches' => $this->url($baseAdminPath . '/matches' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
+            'knockout' => $this->url($baseAdminPath . '/knockout' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
             'teams' => $this->url($baseAdminPath . '/teams' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
         ];
 
@@ -523,6 +619,19 @@ final class TournamentController extends BaseController
         }
         unset($match);
 
+        foreach ($knockoutMatches as &$knockoutMatch) {
+            $matchId = (int) ($knockoutMatch['id'] ?? 0);
+            if ($matchId <= 0) {
+                continue;
+            }
+
+            $path = $isSlugContext
+                ? $this->tournamentAdminKnockoutMatchDetailPath($tournamentSlug, $matchId)
+                : $this->superadminKnockoutMatchDetailPath($tournamentId, $matchId);
+            $knockoutMatch['detail_url'] = $this->url($path);
+        }
+        unset($knockoutMatch);
+
         $this->render('admin/tournament_detail', [
             'title' => 'Tournament detail',
             'tournament' => $tournament,
@@ -533,6 +642,8 @@ final class TournamentController extends BaseController
             'groupMatches' => $filteredGroupMatches,
             'groupMatchesTotalCount' => count($groupMatches),
             'hasGroupMatches' => $hasGroupMatches,
+            'knockoutMatches' => $knockoutMatches,
+            'hasKnockoutMatches' => $hasKnockoutMatches,
             'matchModes' => self::MATCH_MODES,
             'activeSection' => $section,
             'sectionNav' => $sectionNav,
@@ -564,6 +675,9 @@ final class TournamentController extends BaseController
             'generateGroupMatchesActionUrl' => $isSlugContext
                 ? $this->url('/tournament/' . $tournamentSlug . '/admin/matches/generate')
                 : $this->url('/admin/tournament/matches/generate'),
+            'generateKnockoutMatchesActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/knockout/generate')
+                : $this->url('/admin/tournament/knockout/generate'),
         ]);
     }
 
@@ -614,6 +728,71 @@ final class TournamentController extends BaseController
             'scoreActionUrl' => $this->url($scoreActionPath),
             'resetActionUrl' => $this->url($resetActionPath),
             'isSlugContext' => $isSlugContext,
+            'matchStage' => 'group',
+            'requiresDependentResetConfirmation' => false,
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function renderKnockoutMatchDetail(array $tournament, int $matchId, bool $isSlugContext): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $tournamentSlug = (string) ($tournament['slug'] ?? '');
+
+        $matchModel = new MatchModel($this->db());
+        $match = $matchModel->findKnockoutMatchDetailForTournament($tournamentId, $matchId);
+        if ($match === null) {
+            $this->setFlash('error', 'Knockout match not found.');
+            if ($isSlugContext) {
+                $this->redirect($this->tournamentAdminSectionRedirectPath($tournamentSlug, 'knockout'));
+            }
+
+            $this->redirect($this->superadminSectionRedirectPath($tournamentId, 'knockout'));
+        }
+
+        $knockoutMatches = $matchModel->knockoutMatchesForTournament($tournamentId);
+        $graph = $this->buildKnockoutSourceGraph($knockoutMatches);
+        $descendantIds = $this->descendantMatchIdsForSource((int) $match['id'], $graph['source_by_match_id'], $graph['children_by_source']);
+        $requiresDependentResetConfirmation = false;
+        foreach ($knockoutMatches as $knockoutMatch) {
+            $candidateId = (int) ($knockoutMatch['id'] ?? 0);
+            if (!isset($descendantIds[$candidateId])) {
+                continue;
+            }
+
+            $status = (string) ($knockoutMatch['status'] ?? '');
+            $winnerTeamId = (int) ($knockoutMatch['winner_team_id'] ?? 0);
+            $setsSummaryA = (int) ($knockoutMatch['sets_summary_a'] ?? 0);
+            $setsSummaryB = (int) ($knockoutMatch['sets_summary_b'] ?? 0);
+            if ($status === 'finished' || $winnerTeamId > 0 || $setsSummaryA > 0 || $setsSummaryB > 0) {
+                $requiresDependentResetConfirmation = true;
+                break;
+            }
+        }
+
+        $matchSets = $matchModel->setsForMatch($matchId);
+        $backToKnockoutPath = $isSlugContext
+            ? $this->tournamentAdminSectionRedirectPath($tournamentSlug, 'knockout')
+            : $this->superadminSectionRedirectPath($tournamentId, 'knockout');
+        $scoreActionPath = $isSlugContext
+            ? '/tournament/' . $tournamentSlug . '/admin/knockout/' . $matchId . '/score'
+            : '/admin/tournament/knockout/' . $matchId . '/score';
+
+        $this->render('admin/match_detail', [
+            'title' => 'Knockout match detail',
+            'tournament' => $tournament,
+            'match' => $match,
+            'matchSets' => $matchSets,
+            'filters' => [],
+            'backToMatchesUrl' => $this->url($backToKnockoutPath),
+            'scoreActionUrl' => $this->url($scoreActionPath),
+            'startActionUrl' => null,
+            'resetActionUrl' => null,
+            'isSlugContext' => $isSlugContext,
+            'matchStage' => 'knockout',
+            'requiresDependentResetConfirmation' => $requiresDependentResetConfirmation,
         ]);
     }
 
@@ -655,7 +834,7 @@ final class TournamentController extends BaseController
     ): void
     {
         $tournamentId = (int) ($tournament['id'] ?? 0);
-        $matchMode = (string) ($tournament['match_mode'] ?? '');
+        $matchMode = (string) ($tournament['group_stage_mode'] ?? ($tournament['match_mode'] ?? ''));
         $matchModel = new MatchModel($this->db());
         $match = $matchModel->findGroupMatchDetailForTournament($tournamentId, $matchId);
         if ($match === null) {
@@ -688,6 +867,101 @@ final class TournamentController extends BaseController
         }
 
         $this->setFlash('success', 'Match result saved. Match marked as finished.');
+        $this->redirect($successRedirectPath);
+    }
+
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleSaveKnockoutMatchScore(
+        array $tournament,
+        int $matchId,
+        string $redirectPath,
+        string $successRedirectPath
+    ): void {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        $matchMode = (string) ($tournament['knockout_mode'] ?? 'best_of_3');
+        $matchModel = new MatchModel($this->db());
+        $match = $matchModel->findKnockoutMatchDetailForTournament($tournamentId, $matchId);
+        if ($match === null) {
+            $this->setFlash('error', 'Knockout match not found.');
+            $this->redirect($redirectPath);
+        }
+
+        $status = (string) ($match['status'] ?? '');
+        if (!in_array($status, ['scheduled', 'in_progress', 'finished'], true)) {
+            $this->setFlash('error', 'Only scheduled, in-progress, or finished knockout matches can save score.');
+            $this->redirect($redirectPath);
+        }
+
+        $validated = $this->validateScoreInput($matchMode, (int) ($match['team_a_id'] ?? 0), (int) ($match['team_b_id'] ?? 0));
+        if ($validated === null) {
+            $this->redirect($redirectPath);
+        }
+
+        $knockoutMatches = $matchModel->knockoutMatchesForTournament($tournamentId);
+        $graph = $this->buildKnockoutSourceGraph($knockoutMatches);
+        $sourceByMatchId = $graph['source_by_match_id'];
+        $childrenBySource = $graph['children_by_source'];
+        $winnerSourceCode = $sourceByMatchId[$matchId] ?? '';
+        if (!is_string($winnerSourceCode) || $winnerSourceCode === '') {
+            $this->setFlash('error', 'Match source mapping is missing.');
+            $this->redirect($redirectPath);
+        }
+
+        $descendantIds = $this->descendantMatchIdsForSource($matchId, $sourceByMatchId, $childrenBySource);
+        $hasScoredDownstream = false;
+        foreach ($knockoutMatches as $knockoutMatch) {
+            $descendantId = (int) ($knockoutMatch['id'] ?? 0);
+            if (!isset($descendantIds[$descendantId])) {
+                continue;
+            }
+
+            $descendantStatus = (string) ($knockoutMatch['status'] ?? '');
+            $descendantWinner = (int) ($knockoutMatch['winner_team_id'] ?? 0);
+            $descendantSetsA = (int) ($knockoutMatch['sets_summary_a'] ?? 0);
+            $descendantSetsB = (int) ($knockoutMatch['sets_summary_b'] ?? 0);
+            if ($descendantStatus === 'finished' || $descendantWinner > 0 || $descendantSetsA > 0 || $descendantSetsB > 0) {
+                $hasScoredDownstream = true;
+                break;
+            }
+        }
+
+        $confirmResetDependents = $this->requestPostString('confirm_reset_dependents') === '1';
+        if ($hasScoredDownstream && !$confirmResetDependents) {
+            $this->setFlash('error', 'Changing this result will reset dependent knockout matches.');
+            $this->redirect($redirectPath);
+        }
+
+        $resetMatchIds = array_keys($descendantIds);
+        $resetSourceCodes = [$winnerSourceCode];
+        foreach ($descendantIds as $descendantId => $_unused) {
+            $descendantSource = $sourceByMatchId[$descendantId] ?? '';
+            if (!is_string($descendantSource) || $descendantSource === '') {
+                continue;
+            }
+
+            $resetSourceCodes[] = $descendantSource;
+        }
+        $resetSourceCodes = array_values(array_unique($resetSourceCodes));
+
+        $saved = $matchModel->applyKnockoutResultAndProgress(
+            $tournamentId,
+            $matchId,
+            $validated['sets'],
+            $validated['sets_summary_a'],
+            $validated['sets_summary_b'],
+            $validated['winner_team_id'],
+            $resetMatchIds,
+            $resetSourceCodes,
+            $winnerSourceCode
+        );
+        if (!$saved) {
+            $this->setFlash('error', 'Knockout result could not be saved.');
+            $this->redirect($redirectPath);
+        }
+
+        $this->setFlash('success', 'Knockout result saved. Progression updated.');
         $this->redirect($successRedirectPath);
     }
 
@@ -734,11 +1008,18 @@ final class TournamentController extends BaseController
         }
 
         $tournamentModel = new TournamentModel($this->db());
+        $currentSlug = (string) ($tournament['slug'] ?? '');
+        $slugUpdateAction = $this->requestPostString('slug_update_action');
+        $effectiveSlug = $currentSlug;
+        if ($slugUpdateAction === 'update') {
+            $effectiveSlug = $tournamentModel->generateUniqueSlug((string) $data['name'], (int) ($tournament['id'] ?? 0));
+        }
+        $data['slug'] = $effectiveSlug;
 
         try {
             $tournamentModel->update((int) $tournament['id'], $data);
         } catch (Throwable $throwable) {
-            $this->setFlash('error', 'Tournament could not be updated. Slug may already exist.');
+            $this->setFlash('error', 'Tournament could not be updated.');
             $this->redirect($redirectPath);
             return;
         }
@@ -747,14 +1028,14 @@ final class TournamentController extends BaseController
         if (is_array($currentTournamentAdmin) && (int) $currentTournamentAdmin['id'] === (int) $tournament['id']) {
             $_SESSION['tournament_admin'] = [
                 'id' => (int) $tournament['id'],
-                'slug' => (string) $data['slug'],
+                'slug' => $effectiveSlug,
                 'name' => (string) $data['name'],
             ];
         }
 
         $successRedirectPath = $redirectPath;
         if ($redirectByUpdatedSlug) {
-            $successRedirectPath = $this->tournamentAdminSectionRedirectPath((string) $data['slug'], $redirectSection);
+            $successRedirectPath = $this->tournamentAdminSectionRedirectPath($effectiveSlug, $redirectSection);
         }
 
         $this->setFlash('success', 'Tournament settings updated.');
@@ -1044,6 +1325,95 @@ final class TournamentController extends BaseController
     }
 
     /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleGenerateKnockoutMatches(array $tournament, string $redirectPath): void
+    {
+        $tournamentId = (int) ($tournament['id'] ?? 0);
+        if ($tournamentId <= 0) {
+            $this->setFlash('error', 'Invalid tournament selected.');
+            $this->redirect($redirectPath);
+        }
+
+        $advancingTeamsCount = (int) ($tournament['advancing_teams_count'] ?? 0);
+        if ($advancingTeamsCount < 2) {
+            $this->setFlash('error', 'Advancing teams count must be at least 2.');
+            $this->redirect($redirectPath);
+        }
+
+        $matchModel = new MatchModel($this->db());
+        $groupMatchCount = $matchModel->groupMatchCountForTournament($tournamentId);
+        if ($groupMatchCount <= 0) {
+            $this->setFlash('error', 'Generate group-stage matches first.');
+            $this->redirect($redirectPath);
+        }
+
+        $finishedGroupMatches = $matchModel->finishedGroupMatchesForTournament($tournamentId);
+        if (count($finishedGroupMatches) !== $groupMatchCount) {
+            $this->setFlash('error', 'Knockout can be generated only after all group-stage matches are finished.');
+            $this->redirect($redirectPath);
+        }
+
+        $hasKnockoutMatches = $matchModel->knockoutMatchCountForTournament($tournamentId) > 0;
+        $confirmRegenerate = $this->requestPostString('confirm_regenerate') === '1';
+        if ($hasKnockoutMatches && !$confirmRegenerate) {
+            $this->setFlash('error', 'Knockout matches already exist. Confirm regeneration to replace them.');
+            $this->redirect($redirectPath);
+        }
+
+        $finishedMatchIds = array_values(array_filter(
+            array_map(
+                static fn (array $match): int => (int) ($match['id'] ?? 0),
+                $finishedGroupMatches
+            ),
+            static fn (int $id): bool => $id > 0
+        ));
+        $setsByMatchId = $matchModel->setsForMatches($finishedMatchIds);
+
+        $tournamentModel = new TournamentModel($this->db());
+        $groups = $tournamentModel->groupsForTournament($tournamentId);
+        if (count($groups) < 1) {
+            $this->setFlash('error', 'No groups found for this tournament.');
+            $this->redirect($redirectPath);
+        }
+        $teamModel = new TeamModel($this->db());
+        $teams = $teamModel->allByTournament($tournamentId);
+        $groupStandingsByGroup = $this->buildGroupStandings(
+            $groups,
+            $teams,
+            $finishedGroupMatches,
+            $setsByMatchId,
+            (string) ($tournament['group_stage_mode'] ?? ($tournament['match_mode'] ?? ''))
+        );
+        $seededTeams = $this->buildKnockoutSeededTeamsByGroupAdvancement(
+            $groups,
+            $groupStandingsByGroup,
+            $advancingTeamsCount
+        );
+        if ($seededTeams === null) {
+            $this->redirect($redirectPath);
+        }
+
+        $matches = $this->buildKnockoutBracketMatches($seededTeams, $advancingTeamsCount);
+        if (count($matches) < 1) {
+            $this->setFlash('error', 'Knockout matches could not be prepared.');
+            $this->redirect($redirectPath);
+        }
+
+        $matchModel->replaceKnockoutMatches($tournamentId, $matches);
+
+        $bracketSize = $this->nextPowerOfTwo($advancingTeamsCount);
+        $byeCount = $bracketSize - $advancingTeamsCount;
+        if ($byeCount > 0) {
+            $this->setFlash('success', sprintf('Generated %d knockout matches (bracket %d, byes %d).', count($matches), $bracketSize, $byeCount));
+            $this->redirect($redirectPath);
+        }
+
+        $this->setFlash('success', sprintf('Generated %d knockout matches (bracket %d).', count($matches), $bracketSize));
+        $this->redirect($redirectPath);
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     private function resolveTournamentByQueryForSuperadmin(): ?array
@@ -1177,6 +1547,16 @@ final class TournamentController extends BaseController
         return '/tournament/' . $slug . '/admin/matches/' . $matchId . $this->querySuffix($filters);
     }
 
+    private function superadminKnockoutMatchDetailPath(int $tournamentId, int $matchId): string
+    {
+        return '/admin/tournament/knockout/' . $matchId . $this->querySuffix(['id' => $tournamentId]);
+    }
+
+    private function tournamentAdminKnockoutMatchDetailPath(string $slug, int $matchId): string
+    {
+        return '/tournament/' . $slug . '/admin/knockout/' . $matchId;
+    }
+
     /**
      * @return array<string, mixed>|null
      */
@@ -1219,7 +1599,6 @@ final class TournamentController extends BaseController
     private function collectTournamentInput(): ?array
     {
         $name = $this->requestPostString('name');
-        $slug = $this->requestPostString('slug');
         $eventDate = $this->requestPostString('event_date');
         $startTimeRaw = $this->requestPostString('start_time');
         $startTime = $this->normalizeTimeHHMMOrEmpty($startTimeRaw);
@@ -1229,15 +1608,11 @@ final class TournamentController extends BaseController
         $numberOfCourts = (int) $this->requestPostString('number_of_courts');
         $matchDurationMinutes = (int) $this->requestPostString('match_duration_minutes');
         $advancingTeamsCount = (int) $this->requestPostString('advancing_teams_count');
-        $matchMode = $this->requestPostString('match_mode');
+        $groupStageMode = $this->requestPostString('group_stage_mode');
+        $knockoutMode = $this->requestPostString('knockout_mode');
 
-        if ($name === '' || $slug === '') {
-            $this->setFlash('error', 'Tournament name and slug are required.');
-            return null;
-        }
-
-        if (!preg_match('/^[a-z0-9-]+$/', $slug)) {
-            $this->setFlash('error', 'Slug must contain only lowercase letters, numbers and dashes.');
+        if ($name === '') {
+            $this->setFlash('error', 'Tournament name is required.');
             return null;
         }
 
@@ -1276,14 +1651,18 @@ final class TournamentController extends BaseController
             return null;
         }
 
-        if (!in_array($matchMode, self::MATCH_MODES, true)) {
-            $this->setFlash('error', 'Invalid match mode selected.');
+        if (!in_array($groupStageMode, self::MATCH_MODES, true)) {
+            $this->setFlash('error', 'Invalid group stage mode selected.');
+            return null;
+        }
+
+        if (!in_array($knockoutMode, self::MATCH_MODES, true)) {
+            $this->setFlash('error', 'Invalid knockout mode selected.');
             return null;
         }
 
         return [
             'name' => $name,
-            'slug' => $slug,
             'event_date' => $eventDate,
             'start_time' => $startTime,
             'location' => $location,
@@ -1292,8 +1671,460 @@ final class TournamentController extends BaseController
             'number_of_courts' => $numberOfCourts,
             'match_duration_minutes' => $matchDurationMinutes,
             'advancing_teams_count' => $advancingTeamsCount,
-            'match_mode' => $matchMode,
+            'group_stage_mode' => $groupStageMode,
+            'knockout_mode' => $knockoutMode,
         ];
+    }
+
+    /**
+     * @param list<array<string, mixed>> $groups
+     * @param array<int, list<array<string, int|string>>> $groupStandingsByGroup
+     * @return list<array<string, int|string>>|null
+     */
+    private function buildKnockoutSeededTeamsByGroupAdvancement(
+        array $groups,
+        array $groupStandingsByGroup,
+        int $advancingTeamsCount
+    ): ?array {
+        $groupCount = count($groups);
+        if ($groupCount < 1) {
+            $this->setFlash('error', 'No groups found for advancement.');
+            return null;
+        }
+
+        $base = intdiv($advancingTeamsCount, $groupCount);
+        $remainder = $advancingTeamsCount % $groupCount;
+
+        $selectedByTeamId = [];
+        $selectedRows = [];
+        $wildcardCandidates = [];
+
+        foreach ($groups as $group) {
+            $groupId = (int) ($group['id'] ?? 0);
+            if ($groupId <= 0) {
+                continue;
+            }
+
+            $rows = $groupStandingsByGroup[$groupId] ?? [];
+            if (count($rows) < $base) {
+                $groupName = (string) ($group['name'] ?? ('#' . $groupId));
+                $this->setFlash('error', sprintf('Group %s does not have enough ranked teams for advancement.', $groupName));
+                return null;
+            }
+
+            for ($i = 0; $i < count($rows); $i++) {
+                $row = $rows[$i];
+                $teamId = (int) ($row['team_id'] ?? 0);
+                if ($teamId <= 0) {
+                    continue;
+                }
+
+                if ($i < $base) {
+                    if (!isset($selectedByTeamId[$teamId])) {
+                        $selectedByTeamId[$teamId] = true;
+                        $selectedRows[] = $row;
+                    }
+                    continue;
+                }
+
+                $wildcardCandidates[] = $row;
+            }
+        }
+
+        if ($remainder > 0) {
+            usort(
+                $wildcardCandidates,
+                static function (array $a, array $b): int {
+                    $pointsCompare = (int) $b['tournament_points'] <=> (int) $a['tournament_points'];
+                    if ($pointsCompare !== 0) {
+                        return $pointsCompare;
+                    }
+
+                    $pointDiffCompare = (int) $b['point_diff'] <=> (int) $a['point_diff'];
+                    if ($pointDiffCompare !== 0) {
+                        return $pointDiffCompare;
+                    }
+
+                    $pointsForCompare = (int) $b['points_for'] <=> (int) $a['points_for'];
+                    if ($pointsForCompare !== 0) {
+                        return $pointsForCompare;
+                    }
+
+                    return (int) $a['team_id'] <=> (int) $b['team_id'];
+                }
+            );
+
+            foreach ($wildcardCandidates as $candidate) {
+                if ($remainder <= 0) {
+                    break;
+                }
+
+                $teamId = (int) ($candidate['team_id'] ?? 0);
+                if ($teamId <= 0 || isset($selectedByTeamId[$teamId])) {
+                    continue;
+                }
+
+                $selectedByTeamId[$teamId] = true;
+                $selectedRows[] = $candidate;
+                $remainder--;
+            }
+        }
+
+        if (count($selectedRows) !== $advancingTeamsCount) {
+            $this->setFlash('error', sprintf('Not enough ranked teams for knockout. Need %d, selected %d.', $advancingTeamsCount, count($selectedRows)));
+            return null;
+        }
+
+        usort(
+            $selectedRows,
+            static function (array $a, array $b): int {
+                $positionCompare = (int) $a['position'] <=> (int) $b['position'];
+                if ($positionCompare !== 0) {
+                    return $positionCompare;
+                }
+
+                $pointsCompare = (int) $b['tournament_points'] <=> (int) $a['tournament_points'];
+                if ($pointsCompare !== 0) {
+                    return $pointsCompare;
+                }
+
+                $pointDiffCompare = (int) $b['point_diff'] <=> (int) $a['point_diff'];
+                if ($pointDiffCompare !== 0) {
+                    return $pointDiffCompare;
+                }
+
+                $pointsForCompare = (int) $b['points_for'] <=> (int) $a['points_for'];
+                if ($pointsForCompare !== 0) {
+                    return $pointsForCompare;
+                }
+
+                return (int) $a['team_id'] <=> (int) $b['team_id'];
+            }
+        );
+
+        return array_values($selectedRows);
+    }
+
+    private function nextPowerOfTwo(int $value): int
+    {
+        $power = 1;
+        while ($power < $value) {
+            $power *= 2;
+        }
+
+        return $power;
+    }
+
+    private function knockoutRoundNameByParticipantCount(int $participants): string
+    {
+        return match ($participants) {
+            2 => 'Final',
+            4 => 'Semifinal',
+            8 => 'Quarterfinal',
+            16 => 'Round of 16',
+            default => 'Round of ' . $participants,
+        };
+    }
+
+    /**
+     * @param list<array<string, int|string>> $seededTeams
+     * @return list<array{
+     *     round_name: string,
+     *     bracket_position: int,
+     *     team_a_id: int|null,
+     *     team_b_id: int|null,
+     *     team_a_source: string|null,
+     *     team_b_source: string|null,
+     *     status: string
+     * }>
+     */
+    private function buildKnockoutBracketMatches(array $seededTeams, int $advancingTeamsCount): array
+    {
+        $bracketSize = $this->nextPowerOfTwo($advancingTeamsCount);
+        $byeCount = $bracketSize - $advancingTeamsCount;
+        $seededParticipants = [];
+        foreach ($seededTeams as $index => $team) {
+            $teamId = (int) ($team['team_id'] ?? 0);
+            if ($teamId <= 0) {
+                continue;
+            }
+
+            $seededParticipants[] = [
+                'seed' => $index + 1,
+                'rank' => $index + 1,
+                'team_id' => $teamId,
+                'source' => null,
+            ];
+        }
+
+        if (count($seededParticipants) !== $advancingTeamsCount) {
+            return [];
+        }
+
+        $matches = [];
+        $bracketPosition = 1;
+        $roundIndex = 1;
+        $participantsForMainRound = [];
+
+        if ($byeCount > 0) {
+            for ($i = 0; $i < $byeCount; $i++) {
+                $byeParticipant = $seededParticipants[$i] ?? null;
+                if (!is_array($byeParticipant)) {
+                    return [];
+                }
+
+                $participantsForMainRound[] = [
+                    'rank' => (int) ($byeParticipant['rank'] ?? 0),
+                    'team_id' => (int) ($byeParticipant['team_id'] ?? 0),
+                    'source' => null,
+                ];
+            }
+
+            $playInParticipants = array_slice($seededParticipants, $byeCount);
+            $playInPairings = $this->pairHighLow($playInParticipants);
+            if (count($playInPairings) < 1) {
+                return [];
+            }
+
+            foreach ($playInPairings as $index => $pairing) {
+                $teamAId = (int) ($pairing['a']['team_id'] ?? 0);
+                $teamBId = (int) ($pairing['b']['team_id'] ?? 0);
+                if ($teamAId <= 0 || $teamBId <= 0) {
+                    return [];
+                }
+
+                $sourceCode = 'winner:r' . $roundIndex . ':m' . ($index + 1);
+                $matches[] = [
+                    'round_name' => 'Play-in',
+                    'bracket_position' => $bracketPosition,
+                    'team_a_id' => $teamAId,
+                    'team_b_id' => $teamBId,
+                    'team_a_source' => null,
+                    'team_b_source' => null,
+                    'status' => 'scheduled',
+                ];
+                $bracketPosition++;
+
+                $participantsForMainRound[] = [
+                    'rank' => min((int) ($pairing['a']['seed'] ?? 0), (int) ($pairing['b']['seed'] ?? 0)),
+                    'team_id' => null,
+                    'source' => $sourceCode,
+                ];
+            }
+
+            usort(
+                $participantsForMainRound,
+                static fn (array $a, array $b): int => (int) ($a['rank'] ?? 0) <=> (int) ($b['rank'] ?? 0)
+            );
+
+            $roundIndex++;
+        } else {
+            foreach ($seededParticipants as $seededParticipant) {
+                $participantsForMainRound[] = [
+                    'rank' => (int) ($seededParticipant['rank'] ?? 0),
+                    'team_id' => (int) ($seededParticipant['team_id'] ?? 0),
+                    'source' => null,
+                ];
+            }
+        }
+
+        $mainPairings = $this->pairHighLow($participantsForMainRound);
+        if (count($mainPairings) < 1) {
+            return [];
+        }
+
+        $nextRoundParticipants = [];
+        foreach ($mainPairings as $index => $pairing) {
+            $teamAId = (int) ($pairing['a']['team_id'] ?? 0);
+            $teamBId = (int) ($pairing['b']['team_id'] ?? 0);
+            $sourceA = is_string($pairing['a']['source'] ?? null) ? (string) $pairing['a']['source'] : null;
+            $sourceB = is_string($pairing['b']['source'] ?? null) ? (string) $pairing['b']['source'] : null;
+            $sourceCode = 'winner:r' . $roundIndex . ':m' . ($index + 1);
+
+            $matches[] = [
+                'round_name' => $this->knockoutRoundNameByParticipantCount(count($participantsForMainRound)),
+                'bracket_position' => $bracketPosition,
+                'team_a_id' => $teamAId > 0 ? $teamAId : null,
+                'team_b_id' => $teamBId > 0 ? $teamBId : null,
+                'team_a_source' => $teamAId > 0 ? null : $sourceA,
+                'team_b_source' => $teamBId > 0 ? null : $sourceB,
+                'status' => $teamAId > 0 && $teamBId > 0 ? 'scheduled' : 'pending',
+            ];
+            $bracketPosition++;
+
+            $nextRoundParticipants[] = [
+                'team_id' => null,
+                'source' => $sourceCode,
+            ];
+        }
+
+        $roundIndex++;
+        while (count($nextRoundParticipants) > 1) {
+            if (count($nextRoundParticipants) % 2 !== 0) {
+                return [];
+            }
+
+            $currentRoundParticipants = $nextRoundParticipants;
+            $nextRoundParticipants = [];
+            $matchNumber = 1;
+            for ($i = 0; $i < count($currentRoundParticipants); $i += 2) {
+                $participantA = $currentRoundParticipants[$i];
+                $participantB = $currentRoundParticipants[$i + 1];
+                $teamAId = (int) ($participantA['team_id'] ?? 0);
+                $teamBId = (int) ($participantB['team_id'] ?? 0);
+                $sourceA = is_string($participantA['source'] ?? null) ? (string) $participantA['source'] : null;
+                $sourceB = is_string($participantB['source'] ?? null) ? (string) $participantB['source'] : null;
+
+                $matches[] = [
+                    'round_name' => $this->knockoutRoundNameByParticipantCount(count($currentRoundParticipants)),
+                    'bracket_position' => $bracketPosition,
+                    'team_a_id' => $teamAId > 0 ? $teamAId : null,
+                    'team_b_id' => $teamBId > 0 ? $teamBId : null,
+                    'team_a_source' => $teamAId > 0 ? null : $sourceA,
+                    'team_b_source' => $teamBId > 0 ? null : $sourceB,
+                    'status' => $teamAId > 0 && $teamBId > 0 ? 'scheduled' : 'pending',
+                ];
+                $bracketPosition++;
+
+                $nextRoundParticipants[] = [
+                    'team_id' => null,
+                    'source' => 'winner:r' . $roundIndex . ':m' . $matchNumber,
+                ];
+                $matchNumber++;
+            }
+
+            $roundIndex++;
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $participants
+     * @return list<array{a: array<string, mixed>, b: array<string, mixed>}>
+     */
+    private function pairHighLow(array $participants): array
+    {
+        $pairs = [];
+        $left = 0;
+        $right = count($participants) - 1;
+        while ($left < $right) {
+            $pairs[] = [
+                'a' => $participants[$left],
+                'b' => $participants[$right],
+            ];
+            $left++;
+            $right--;
+        }
+
+        return $pairs;
+    }
+
+    /**
+     * @param list<array<string, mixed>> $knockoutMatches
+     * @return array{
+     *     source_by_match_id: array<int, string>,
+     *     children_by_source: array<string, list<array{match_id: int, slot: string}>>
+     * }
+     */
+    private function buildKnockoutSourceGraph(array $knockoutMatches): array
+    {
+        $sourceByMatchId = [];
+        $childrenBySource = [];
+
+        $roundIndex = 0;
+        $currentRoundName = '';
+        $matchNumberInRound = 0;
+        foreach ($knockoutMatches as $match) {
+            $roundName = trim((string) ($match['round_name'] ?? ''));
+            if ($roundName !== $currentRoundName) {
+                $currentRoundName = $roundName;
+                $roundIndex++;
+                $matchNumberInRound = 0;
+            }
+
+            $matchNumberInRound++;
+            $matchId = (int) ($match['id'] ?? 0);
+            if ($matchId <= 0) {
+                continue;
+            }
+
+            $sourceByMatchId[$matchId] = 'winner:r' . $roundIndex . ':m' . $matchNumberInRound;
+        }
+
+        foreach ($knockoutMatches as $match) {
+            $matchId = (int) ($match['id'] ?? 0);
+            if ($matchId <= 0) {
+                continue;
+            }
+
+            $teamASource = trim((string) ($match['team_a_source'] ?? ''));
+            if ($teamASource !== '') {
+                if (!isset($childrenBySource[$teamASource])) {
+                    $childrenBySource[$teamASource] = [];
+                }
+                $childrenBySource[$teamASource][] = [
+                    'match_id' => $matchId,
+                    'slot' => 'a',
+                ];
+            }
+
+            $teamBSource = trim((string) ($match['team_b_source'] ?? ''));
+            if ($teamBSource !== '') {
+                if (!isset($childrenBySource[$teamBSource])) {
+                    $childrenBySource[$teamBSource] = [];
+                }
+                $childrenBySource[$teamBSource][] = [
+                    'match_id' => $matchId,
+                    'slot' => 'b',
+                ];
+            }
+        }
+
+        return [
+            'source_by_match_id' => $sourceByMatchId,
+            'children_by_source' => $childrenBySource,
+        ];
+    }
+
+    /**
+     * @param array<int, string> $sourceByMatchId
+     * @param array<string, list<array{match_id: int, slot: string}>> $childrenBySource
+     * @return array<int, bool>
+     */
+    private function descendantMatchIdsForSource(int $matchId, array $sourceByMatchId, array $childrenBySource): array
+    {
+        $rootSource = $sourceByMatchId[$matchId] ?? '';
+        if (!is_string($rootSource) || $rootSource === '') {
+            return [];
+        }
+
+        $queue = [$rootSource];
+        $visitedSources = [];
+        $descendantIds = [];
+        while (count($queue) > 0) {
+            $source = array_shift($queue);
+            if (!is_string($source) || $source === '' || isset($visitedSources[$source])) {
+                continue;
+            }
+
+            $visitedSources[$source] = true;
+            $children = $childrenBySource[$source] ?? [];
+            foreach ($children as $child) {
+                $childMatchId = (int) ($child['match_id'] ?? 0);
+                if ($childMatchId <= 0) {
+                    continue;
+                }
+
+                $descendantIds[$childMatchId] = true;
+                $nextSource = $sourceByMatchId[$childMatchId] ?? '';
+                if (is_string($nextSource) && $nextSource !== '' && !isset($visitedSources[$nextSource])) {
+                    $queue[] = $nextSource;
+                }
+            }
+        }
+
+        return $descendantIds;
     }
 
     /**

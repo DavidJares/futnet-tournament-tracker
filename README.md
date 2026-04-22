@@ -53,6 +53,8 @@ docs/
 - Superadmin dashboard
   - list tournaments
   - create tournament
+  - slug is auto-generated from tournament name and shown as read-only with copy action
+  - slug uniqueness is handled automatically with numeric suffixes when needed
   - delete tournament (with confirmation)
   - link to tournament detail
 - Tournament admin foundation (`/admin/tournament?id={id}`)
@@ -63,7 +65,10 @@ docs/
     - Teams
   - edit tournament settings:
     - name
-    - slug
+    - slug (read-only with copy action)
+    - when renaming tournament:
+      - keep current slug
+      - or regenerate unique slug from new name
     - event date
     - start time
     - location
@@ -72,7 +77,8 @@ docs/
     - number of courts
     - match duration in minutes
     - advancing teams count
-    - `match_mode` (`fixed_2_sets`, `best_of_3`)
+    - `group_stage_mode` (`fixed_2_sets`, `best_of_3`)
+    - `knockout_mode` (`fixed_2_sets`, `best_of_3`)
   - group names auto-generated as `A`, `B`, `C`, ...
 - Team management
   - add team
@@ -107,6 +113,53 @@ docs/
     - `best_of_3`: 2 or 3 sets, first to 2 set wins
   - match rows in Matches tab are clickable and open match detail
   - existing group/court filters remain available and are preserved when navigating to/from match detail
+- Knockout stage generation (full bracket structure)
+  - new Knockout section in tournament admin
+  - generate knockout bracket structure from finished group-stage standings with per-group advancement
+  - generation allowed only when all group-stage matches are finished
+  - supports standard and non-standard advancing counts using byes
+  - advancing selection:
+    - `base = floor(N / G)` teams from each group (`G` = groups, `N` = advancing teams)
+    - remaining slots are wildcards from next-best teams across groups
+  - wildcard ranking uses:
+    - tournament points
+    - point difference
+    - points scored
+    - stable fallback by team id
+  - global seeding orders selected teams by:
+    - group position (all 1st-place teams, then all 2nd-place teams, etc.)
+    - tournament points
+    - point difference
+    - points scored
+    - stable fallback by team id
+  - bracket sizing:
+    - `B = next power of two >= N`
+    - `bye_count = B - N`
+    - top seeds receive byes
+  - opening pairings:
+    - 1 vs N
+    - 2 vs N-1
+    - etc.
+  - regenerating knockout requires confirmation and replaces only `stage = 'knockout'` matches
+  - stores knockout matches in `matches` with:
+    - `stage = 'knockout'`
+    - `group_id = NULL`
+    - `round_name`
+    - `bracket_position`
+    - `team_a_id` / `team_b_id`
+    - `team_a_source` / `team_b_source` for pending rounds
+    - `status = 'scheduled'` or `status = 'pending'`
+- Knockout match detail and progression
+  - knockout matches are clickable from Knockout tab
+  - score entry follows `knockout_mode`
+  - saving knockout result sets winner and marks match `finished`
+  - winner is automatically propagated to dependent next-round slots
+  - dependent match status is updated automatically:
+    - `scheduled` when both participants are known
+    - `pending` when one side is still unknown
+  - editing finished knockout result is allowed
+  - if downstream knockout matches already have results, confirmation is required
+  - confirmed change resets the entire downstream branch and re-applies progression
 - Group standings in Groups tab
   - computed dynamically from finished group-stage matches only
   - per group table includes:
@@ -176,5 +229,6 @@ Prepared for future scheduling and manual reorder with fields including:
 ## Not Implemented Yet
 
 - Knockout progression
+- Bracket visualization
 - Public pages
 - Drag and drop scheduling/reordering
