@@ -337,12 +337,13 @@ final class TournamentController extends BaseController
         $matchId = $this->matchIdFromRoute();
         $filters = $this->filtersFromPost();
         $redirectPath = $this->superadminMatchDetailPath((int) $tournament['id'], $matchId, $filters);
+        $successRedirectPath = '/admin/tournament/matches' . $this->querySuffix(array_merge(['id' => (int) $tournament['id']], $filters));
         if ($matchId <= 0) {
             $this->setFlash('error', 'Invalid match selected.');
             $this->redirect($this->superadminSectionRedirectPath((int) $tournament['id'], 'matches'));
         }
 
-        $this->handleSaveGroupMatchScore($tournament, $matchId, $redirectPath);
+        $this->handleSaveGroupMatchScore($tournament, $matchId, $redirectPath, $successRedirectPath);
     }
 
     public function saveGroupMatchScoreBySlug(): void
@@ -355,12 +356,13 @@ final class TournamentController extends BaseController
         $matchId = $this->matchIdFromRoute();
         $filters = $this->filtersFromPost();
         $redirectPath = $this->tournamentAdminMatchDetailPath((string) $tournament['slug'], $matchId, $filters);
+        $successRedirectPath = $this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches') . $this->querySuffix($filters);
         if ($matchId <= 0) {
             $this->setFlash('error', 'Invalid match selected.');
             $this->redirect($this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'matches'));
         }
 
-        $this->handleSaveGroupMatchScore($tournament, $matchId, $redirectPath);
+        $this->handleSaveGroupMatchScore($tournament, $matchId, $redirectPath, $successRedirectPath);
     }
 
     public function resetGroupMatchResult(): void
@@ -645,7 +647,12 @@ final class TournamentController extends BaseController
     /**
      * @param array<string, mixed> $tournament
      */
-    private function handleSaveGroupMatchScore(array $tournament, int $matchId, string $redirectPath): void
+    private function handleSaveGroupMatchScore(
+        array $tournament,
+        int $matchId,
+        string $redirectPath,
+        string $successRedirectPath
+    ): void
     {
         $tournamentId = (int) ($tournament['id'] ?? 0);
         $matchMode = (string) ($tournament['match_mode'] ?? '');
@@ -681,7 +688,7 @@ final class TournamentController extends BaseController
         }
 
         $this->setFlash('success', 'Match result saved. Match marked as finished.');
-        $this->redirect($redirectPath);
+        $this->redirect($successRedirectPath);
     }
 
     /**
