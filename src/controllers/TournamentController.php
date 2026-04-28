@@ -14,7 +14,15 @@ use Throwable;
 final class TournamentController extends BaseController
 {
     private const MATCH_MODES = ['fixed_2_sets', 'best_of_3'];
-    private const ADMIN_SECTIONS = ['tournament', 'groups', 'matches', 'knockout', 'teams'];
+    private const ADMIN_SECTIONS = ['tournament', 'groups', 'matches', 'knockout', 'public_view', 'teams'];
+    private const PUBLIC_SCREEN_DEFINITIONS = [
+        'overview' => ['label' => 'Overview', 'path' => '/overview'],
+        'next_matches' => ['label' => 'Current / Next Matches', 'path' => '/next'],
+        'standings' => ['label' => 'Group Standings', 'path' => '/standings'],
+        'group_schedule' => ['label' => 'Group Stage Schedule', 'path' => '/schedule'],
+        'knockout' => ['label' => 'Knockout', 'path' => '/knockout'],
+        'recent_results' => ['label' => 'Recent Results', 'path' => '/results'],
+    ];
 
     public function detail(): void
     {
@@ -119,6 +127,27 @@ final class TournamentController extends BaseController
             true,
             $redirectSection
         );
+    }
+
+    public function updatePublicView(): void
+    {
+        $this->requireSuperadminAuth();
+        $tournament = $this->resolveTournamentByPostForSuperadmin();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleUpdatePublicView($tournament, $this->superadminSectionRedirectPath((int) $tournament['id'], 'public_view'));
+    }
+
+    public function updatePublicViewBySlug(): void
+    {
+        $tournament = $this->resolveTournamentBySlugWithAdminAccess();
+        if ($tournament === null) {
+            return;
+        }
+
+        $this->handleUpdatePublicView($tournament, $this->tournamentAdminSectionRedirectPath((string) $tournament['slug'], 'public_view'));
     }
 
     public function createTeam(): void
@@ -542,8 +571,10 @@ final class TournamentController extends BaseController
             'groups' => $this->url($baseAdminPath . '/groups' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
             'matches' => $this->url($baseAdminPath . '/matches' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
             'knockout' => $this->url($baseAdminPath . '/knockout' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
+            'public_view' => $this->url($baseAdminPath . '/public_view' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
             'teams' => $this->url($baseAdminPath . '/teams' . ($isSlugContext ? '' : '?id=' . $tournamentId)),
         ];
+        $publicScreens = $this->buildPublicScreenSettingsViewData($tournamentModel, $tournamentId, $tournamentSlug);
 
         $groupFilterOptions = [];
         foreach ($groups as $group) {
@@ -652,6 +683,7 @@ final class TournamentController extends BaseController
             'courtFilterOptions' => $courtFilterOptions,
             'selectedGroupFilter' => $selectedGroupFilter,
             'selectedCourtFilter' => $selectedCourtFilter,
+            'publicScreenSettings' => $publicScreens,
             'backUrl' => $isSlugContext ? null : $this->url('/admin/dashboard'),
             'backLabel' => 'Back to dashboard',
             'settingsActionUrl' => $isSlugContext
@@ -678,6 +710,10 @@ final class TournamentController extends BaseController
             'generateKnockoutMatchesActionUrl' => $isSlugContext
                 ? $this->url('/tournament/' . $tournamentSlug . '/admin/knockout/generate')
                 : $this->url('/admin/tournament/knockout/generate'),
+            'publicViewSettingsActionUrl' => $isSlugContext
+                ? $this->url('/tournament/' . $tournamentSlug . '/admin/public-view/update')
+                : $this->url('/admin/tournament/public-view/update'),
+            'publicDisplayUrl' => $this->url('/public/' . $tournamentSlug . '/display'),
         ]);
     }
 
@@ -1400,6 +1436,12 @@ final class TournamentController extends BaseController
             $this->redirect($redirectPath);
         }
 
+        $matches = $this->applyEstimatedKnockoutSchedule(
+            $matches,
+            (int) ($tournament['number_of_courts'] ?? 1),
+            (int) ($tournament['match_duration_minutes'] ?? 20)
+        );
+
         $matchModel->replaceKnockoutMatches($tournamentId, $matches);
 
         $bracketSize = $this->nextPowerOfTwo($advancingTeamsCount);
@@ -1677,6 +1719,255 @@ final class TournamentController extends BaseController
     }
 
     /**
+     * @param array<string, mixed> $tournament
+     */
+    private function handleUpdatePublicView(array $tournament, string $redirectPath): void
+    {
+        $formScope = $this->requestPostString('public_view_form');
+        if ($formScope !== 'general' && $formScope !== 'screen_list') {
+            $formScope = 'general';
+        }
+
+        $publicViewEnabled = $this->requestPostString('public_view_enabled') === '1';
+        $autoplayEnabled = $this->requestPostString('autoplay_enabled') === '1';
+        $rotationIntervalSeconds = (int) $this->requestPostString('rotation_interval_seconds');
+        if ($rotationIntervalSeconds < 5 || $rotationIntervalSeconds > 300) {
+            $this->setFlash('error', 'Rotation interval must be between 5 and 300 seconds.');
+            $this->redirect($redirectPath);
+        }
+
+        $screensByKey = null;
+        if ($formScope === 'screen_list') {
+            $rawEnabled = $_POST['screen_enabled'] ?? [];
+            $rawOrder = $_POST['screen_order'] ?? [];
+            $enabledMap = is_array($rawEnabled) ? $rawEnabled : [];
+            $orderMap = is_array($rawOrder) ? $rawOrder : [];
+
+            $screensByKey = [];
+            foreach (self::PUBLIC_SCREEN_DEFINITIONS as $screenKey => $definition) {
+                $isEnabled = isset($enabledMap[$screenKey]) && (string) $enabledMap[$screenKey] === '1';
+                $sortOrder = 1;
+                if (isset($orderMap[$screenKey])) {
+                    $sortOrder = (int) $orderMap[$screenKey];
+                }
+                $screensByKey[$screenKey] = [
+                    'is_enabled' => $isEnabled ? 1 : 0,
+                    'sort_order' => max(1, min(99, $sortOrder)),
+                ];
+            }
+        }
+
+        $publicTitleOverride = trim($this->requestPostString('public_title_override'));
+        $publicDescription = trim($this->requestPostString('public_description'));
+        $publicMapUrl = trim($this->requestPostString('public_map_url'));
+        if ($publicMapUrl !== '' && filter_var($publicMapUrl, FILTER_VALIDATE_URL) === false) {
+            $this->setFlash('error', 'Map URL must be a valid absolute URL.');
+            $this->redirect($redirectPath);
+        }
+        $publicMapEmbedInput = trim($this->requestPostString('public_map_embed_url'));
+        $publicMapEmbedUrl = $this->extractPublicMapEmbedUrl($publicMapEmbedInput);
+        if ($publicMapEmbedInput !== '' && $publicMapEmbedUrl === null) {
+            $this->setFlash('error', 'Map embed must be a valid Google embed URL or iframe snippet.');
+            $this->redirect($redirectPath);
+        }
+
+        $existingLogoPath = trim((string) ($tournament['public_logo_path'] ?? ''));
+        $logoPath = $existingLogoPath;
+        $logoUpload = $_FILES['public_logo'] ?? null;
+        if (
+            $formScope === 'general'
+            && is_array($logoUpload)
+            && (int) ($logoUpload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE
+        ) {
+            $uploadResult = $this->handlePublicLogoUpload($logoUpload, $existingLogoPath);
+            if (!is_array($uploadResult) || (string) ($uploadResult['error'] ?? '') !== '') {
+                $this->setFlash('error', (string) ($uploadResult['error'] ?? 'Logo upload failed.'));
+                $this->redirect($redirectPath);
+            }
+            $logoPath = (string) ($uploadResult['path'] ?? '');
+        }
+
+        $tournamentModel = new TournamentModel($this->db());
+        try {
+            $tournamentModel->savePublicViewSettings(
+                (int) $tournament['id'],
+                $publicViewEnabled,
+                $autoplayEnabled,
+                $rotationIntervalSeconds,
+                $publicTitleOverride,
+                $publicDescription,
+                $logoPath,
+                $publicMapUrl,
+                $publicMapEmbedUrl ?? '',
+                $screensByKey
+            );
+        } catch (Throwable $throwable) {
+            $this->setFlash('error', 'Public View settings could not be updated.');
+            $this->redirect($redirectPath);
+            return;
+        }
+
+        $this->setFlash('success', 'Public View settings updated.');
+        $this->redirect($redirectPath);
+    }
+
+    private function extractPublicMapEmbedUrl(string $input): ?string
+    {
+        $input = trim($input);
+        if ($input === '') {
+            return '';
+        }
+
+        $candidate = $input;
+        if (stripos($input, '<iframe') !== false) {
+            if (preg_match('/src\s*=\s*"([^"]+)"/i', $input, $matches) === 1) {
+                $candidate = trim((string) ($matches[1] ?? ''));
+            } elseif (preg_match("/src\s*=\s*'([^']+)'/i", $input, $matches) === 1) {
+                $candidate = trim((string) ($matches[1] ?? ''));
+            } else {
+                return null;
+            }
+        }
+
+        if (filter_var($candidate, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+
+        if (strpos($candidate, 'https://www.google.com/maps/embed') !== 0) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * @param array<string, mixed> $logoUpload
+     * @param string $existingLogoPath
+     * @return array{path?: string, error?: string}
+     */
+    private function handlePublicLogoUpload(array $logoUpload, string $existingLogoPath): array
+    {
+        $uploadError = (int) ($logoUpload['error'] ?? UPLOAD_ERR_NO_FILE);
+        if ($uploadError !== UPLOAD_ERR_OK) {
+            return ['error' => 'Logo upload failed.'];
+        }
+
+        $tmpName = (string) ($logoUpload['tmp_name'] ?? '');
+        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+            return ['error' => 'Uploaded logo file is invalid.'];
+        }
+
+        $fileSize = (int) ($logoUpload['size'] ?? 0);
+        if ($fileSize <= 0 || $fileSize > (2 * 1024 * 1024)) {
+            return ['error' => 'Logo file size must be up to 2 MB.'];
+        }
+
+        $fileInfo = @getimagesize($tmpName);
+        $mimeType = is_array($fileInfo) ? strtolower((string) ($fileInfo['mime'] ?? '')) : '';
+        $extensionByMime = [
+            'image/png' => 'png',
+            'image/jpeg' => 'jpg',
+            'image/webp' => 'webp',
+        ];
+        $extension = $extensionByMime[$mimeType] ?? '';
+        if ($extension === '') {
+            return ['error' => 'Logo must be PNG, JPG, or WEBP.'];
+        }
+
+        $publicRoot = dirname(__DIR__, 2) . '/public';
+        $uploadDirectory = $publicRoot . '/uploads/tournament_logos';
+        if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
+            return ['error' => 'Could not create logo upload directory.'];
+        }
+
+        $random = bin2hex(random_bytes(8));
+        $fileName = 'logo_' . time() . '_' . $random . '.' . $extension;
+        $targetPath = $uploadDirectory . '/' . $fileName;
+        if (!move_uploaded_file($tmpName, $targetPath)) {
+            return ['error' => 'Could not save uploaded logo file.'];
+        }
+
+        $relativePath = 'uploads/tournament_logos/' . $fileName;
+        $this->deletePublicLogoIfManaged($existingLogoPath, $publicRoot);
+
+        return ['path' => $relativePath];
+    }
+
+    private function deletePublicLogoIfManaged(string $logoPath, string $publicRoot): void
+    {
+        $logoPath = trim($logoPath);
+        if ($logoPath === '') {
+            return;
+        }
+
+        if (strpos($logoPath, 'uploads/tournament_logos/') !== 0) {
+            return;
+        }
+
+        $fullPath = $publicRoot . '/' . $logoPath;
+        if (is_file($fullPath)) {
+            @unlink($fullPath);
+        }
+    }
+
+    /**
+     * @return list<array{
+     *     key: string,
+     *     label: string,
+     *     is_enabled: int,
+     *     sort_order: int,
+     *     path: string,
+     *     direct_url: string
+     * }>
+     */
+    private function buildPublicScreenSettingsViewData(TournamentModel $tournamentModel, int $tournamentId, string $tournamentSlug): array
+    {
+        $stored = [];
+        foreach ($tournamentModel->publicScreensForTournament($tournamentId) as $row) {
+            $screenKey = (string) ($row['screen_key'] ?? '');
+            if ($screenKey === '') {
+                continue;
+            }
+
+            $stored[$screenKey] = [
+                'is_enabled' => (int) ($row['is_enabled'] ?? 0),
+                'sort_order' => (int) ($row['sort_order'] ?? 1),
+            ];
+        }
+
+        $screens = [];
+        foreach (self::PUBLIC_SCREEN_DEFINITIONS as $screenKey => $definition) {
+            $path = (string) ($definition['path'] ?? '/overview');
+            $settings = $stored[$screenKey] ?? null;
+            $isEnabled = is_array($settings) ? (int) ($settings['is_enabled'] ?? 0) : 1;
+            $sortOrder = is_array($settings) ? (int) ($settings['sort_order'] ?? 1) : (count($screens) + 1);
+
+            $screens[] = [
+                'key' => $screenKey,
+                'label' => (string) ($definition['label'] ?? $screenKey),
+                'is_enabled' => $isEnabled > 0 ? 1 : 0,
+                'sort_order' => max(1, min(99, $sortOrder)),
+                'path' => $path,
+                'direct_url' => $this->url('/public/' . $tournamentSlug . $path),
+            ];
+        }
+
+        usort(
+            $screens,
+            static function (array $a, array $b): int {
+                $orderCompare = (int) $a['sort_order'] <=> (int) $b['sort_order'];
+                if ($orderCompare !== 0) {
+                    return $orderCompare;
+                }
+
+                return strcmp((string) $a['label'], (string) $b['label']);
+            }
+        );
+
+        return $screens;
+    }
+
+    /**
      * @param list<array<string, mixed>> $groups
      * @param array<int, list<array<string, int|string>>> $groupStandingsByGroup
      * @return list<array<string, int|string>>|null
@@ -1835,7 +2126,9 @@ final class TournamentController extends BaseController
      *     team_b_id: int|null,
      *     team_a_source: string|null,
      *     team_b_source: string|null,
-     *     status: string
+     *     status: string,
+     *     court_number?: int|null,
+     *     planned_start?: string|null
      * }>
      */
     private function buildKnockoutBracketMatches(array $seededTeams, int $advancingTeamsCount): array
@@ -1994,6 +2287,62 @@ final class TournamentController extends BaseController
             }
 
             $roundIndex++;
+        }
+
+        return $matches;
+    }
+
+    /**
+     * @param list<array{
+     *     round_name: string,
+     *     bracket_position: int,
+     *     team_a_id: int|null,
+     *     team_b_id: int|null,
+     *     team_a_source: string|null,
+     *     team_b_source: string|null,
+     *     status: string,
+     *     court_number?: int|null,
+     *     planned_start?: string|null
+     * }> $matches
+     * @return list<array{
+     *     round_name: string,
+     *     bracket_position: int,
+     *     team_a_id: int|null,
+     *     team_b_id: int|null,
+     *     team_a_source: string|null,
+     *     team_b_source: string|null,
+     *     status: string,
+     *     court_number?: int|null,
+     *     planned_start?: string|null
+     * }>
+     */
+    private function applyEstimatedKnockoutSchedule(array $matches, int $courtCount, int $matchDurationMinutes): array
+    {
+        $courtCount = max(1, $courtCount);
+        $matchDurationMinutes = max(1, $matchDurationMinutes);
+        $firstStart = (new DateTimeImmutable('now'))->add(new DateInterval('PT10M'));
+
+        $playableIndexes = [];
+        foreach ($matches as $index => $match) {
+            $status = (string) ($match['status'] ?? '');
+            if ($status === 'scheduled') {
+                $playableIndexes[] = $index;
+            }
+        }
+
+        foreach ($matches as $index => $match) {
+            if (!in_array($index, $playableIndexes, true)) {
+                $matches[$index]['court_number'] = null;
+                $matches[$index]['planned_start'] = null;
+            }
+        }
+
+        foreach ($playableIndexes as $slot => $matchIndex) {
+            $courtNumber = ($slot % $courtCount) + 1;
+            $wave = intdiv($slot, $courtCount);
+            $plannedStart = $firstStart->add(new DateInterval('PT' . ($wave * $matchDurationMinutes) . 'M'));
+            $matches[$matchIndex]['court_number'] = $courtNumber;
+            $matches[$matchIndex]['planned_start'] = $plannedStart->format('Y-m-d H:i:s');
         }
 
         return $matches;

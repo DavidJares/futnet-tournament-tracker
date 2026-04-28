@@ -13,6 +13,7 @@ $sectionLabels = [
     'groups' => 'Groups',
     'matches' => 'Group Stage',
     'knockout' => 'Knockout',
+    'public_view' => 'Public View',
     'teams' => 'Teams',
 ];
 ?>

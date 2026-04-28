@@ -28,7 +28,7 @@ if ($status === 'scheduled') {
     $statusClass = 'text-bg-success';
 }
 
-$plannedStartDisplay = '-';
+$plannedStartDisplay = $isKnockoutStage ? 'TBD' : '-';
 $plannedStartRaw = (string) ($match['planned_start'] ?? '');
 if ($plannedStartRaw !== '') {
     $plannedStartDate = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $plannedStartRaw);
@@ -82,16 +82,14 @@ foreach ($matchSets as $set) {
                 <div class="small text-muted">Team B</div>
                 <div class="fw-semibold"><?= htmlspecialchars((string) ($match['team_b_name'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></div>
             </div>
-            <?php if (!$isKnockoutStage): ?>
-                <div class="col-6 col-md-3">
-                    <div class="small text-muted">Court</div>
-                    <div><?= (int) ($match['court_number'] ?? 0) > 0 ? ('Court ' . (int) $match['court_number']) : '-' ?></div>
-                </div>
-                <div class="col-6 col-md-3">
-                    <div class="small text-muted">Planned start</div>
-                    <div><?= htmlspecialchars($plannedStartDisplay, ENT_QUOTES, 'UTF-8') ?></div>
-                </div>
-            <?php endif; ?>
+            <div class="col-6 col-md-3">
+                <div class="small text-muted">Court</div>
+                <div><?= (int) ($match['court_number'] ?? 0) > 0 ? ('Court ' . (int) $match['court_number']) : ($isKnockoutStage ? 'TBD' : '-') ?></div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="small text-muted"><?= $isKnockoutStage ? 'Estimated start' : 'Planned start' ?></div>
+                <div><?= htmlspecialchars($plannedStartDisplay, ENT_QUOTES, 'UTF-8') ?></div>
+            </div>
             <div class="col-12 col-md-6">
                 <div class="small text-muted">Status</div>
                 <div><span class="badge <?= htmlspecialchars($statusClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></span></div>

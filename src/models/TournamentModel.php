@@ -23,7 +23,10 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->query(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
-                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode, created_at
+                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode,
+                    public_view_enabled, autoplay_enabled, rotation_interval_seconds,
+                    public_title_override, public_description, public_logo_path, public_map_url, public_map_embed_url,
+                    created_at
              FROM tournaments
              ORDER BY created_at DESC, id DESC'
         );
@@ -59,6 +62,14 @@ final class TournamentModel
                 group_stage_mode,
                 knockout_mode,
                 match_mode,
+                public_view_enabled,
+                autoplay_enabled,
+                rotation_interval_seconds,
+                public_title_override,
+                public_description,
+                public_logo_path,
+                public_map_url,
+                public_map_embed_url,
                 created_at,
                 updated_at
              ) VALUES (
@@ -75,6 +86,14 @@ final class TournamentModel
                 :group_stage_mode,
                 :knockout_mode,
                 :match_mode,
+                :public_view_enabled,
+                :autoplay_enabled,
+                :rotation_interval_seconds,
+                :public_title_override,
+                :public_description,
+                :public_logo_path,
+                :public_map_url,
+                :public_map_embed_url,
                 NOW(),
                 NOW()
              )'
@@ -94,10 +113,22 @@ final class TournamentModel
             'group_stage_mode' => (string) $data['group_stage_mode'],
             'knockout_mode' => (string) $data['knockout_mode'],
             'match_mode' => (string) $data['group_stage_mode'],
+            'public_view_enabled' => (int) ($data['public_view_enabled'] ?? 0),
+            'autoplay_enabled' => (int) ($data['autoplay_enabled'] ?? 1),
+            'rotation_interval_seconds' => (int) ($data['rotation_interval_seconds'] ?? 15),
+            'public_title_override' => $this->nullIfEmpty((string) ($data['public_title_override'] ?? '')),
+            'public_description' => $this->nullIfEmpty((string) ($data['public_description'] ?? '')),
+            'public_logo_path' => $this->nullIfEmpty((string) ($data['public_logo_path'] ?? '')),
+            'public_map_url' => $this->nullIfEmpty((string) ($data['public_map_url'] ?? '')),
+            'public_map_embed_url' => $this->nullIfEmpty((string) ($data['public_map_embed_url'] ?? '')),
         ]);
 
         $tournamentId = (int) $pdo->lastInsertId();
         $this->syncGroupNames($tournamentId, (int) $data['number_of_groups']);
+        $this->upsertPublicScreens(
+            $tournamentId,
+            $this->normalizePublicScreens($data['public_screens'] ?? [])
+        );
 
         return $tournamentId;
     }
@@ -110,7 +141,10 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
-                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode, created_at, updated_at
+                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode,
+                    public_view_enabled, autoplay_enabled, rotation_interval_seconds,
+                    public_title_override, public_description, public_logo_path, public_map_url, public_map_embed_url,
+                    created_at, updated_at
              FROM tournaments
              WHERE id = :id
              LIMIT 1'
@@ -129,7 +163,10 @@ final class TournamentModel
         $pdo = $this->database->pdo();
         $statement = $pdo->prepare(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
-                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode, created_at, updated_at
+                    match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode,
+                    public_view_enabled, autoplay_enabled, rotation_interval_seconds,
+                    public_title_override, public_description, public_logo_path, public_map_url, public_map_embed_url,
+                    created_at, updated_at
              FROM tournaments
              WHERE slug = :slug
              LIMIT 1'
@@ -173,6 +210,7 @@ final class TournamentModel
     public function update(int $id, array $data): void
     {
         $pdo = $this->database->pdo();
+        $existing = $this->findById($id) ?? [];
 
         $params = [
             'id' => $id,
@@ -188,6 +226,15 @@ final class TournamentModel
             'group_stage_mode' => (string) $data['group_stage_mode'],
             'knockout_mode' => (string) $data['knockout_mode'],
             'match_mode' => (string) $data['group_stage_mode'],
+            'public_view_enabled' => array_key_exists('public_view_enabled', $data)
+                ? (int) $data['public_view_enabled']
+                : ((int) ($existing['public_view_enabled'] ?? 0)),
+            'autoplay_enabled' => array_key_exists('autoplay_enabled', $data)
+                ? (int) $data['autoplay_enabled']
+                : ((int) ($existing['autoplay_enabled'] ?? 1)),
+            'rotation_interval_seconds' => array_key_exists('rotation_interval_seconds', $data)
+                ? (int) $data['rotation_interval_seconds']
+                : ((int) ($existing['rotation_interval_seconds'] ?? 15)),
         ];
 
         $passwordClause = '';
@@ -215,6 +262,9 @@ final class TournamentModel
                  advancing_teams_count = :advancing_teams_count,
                  group_stage_mode = :group_stage_mode,
                  knockout_mode = :knockout_mode,
+                 public_view_enabled = :public_view_enabled,
+                 autoplay_enabled = :autoplay_enabled,
+                 rotation_interval_seconds = :rotation_interval_seconds,
                  match_mode = :match_mode,
                  updated_at = NOW()' . $passwordClause . '
              WHERE id = :id'
@@ -223,6 +273,12 @@ final class TournamentModel
         $statement->execute($params);
 
         $this->syncGroupNames($id, (int) $data['number_of_groups']);
+        if (array_key_exists('public_screens', $data)) {
+            $this->upsertPublicScreens(
+                $id,
+                $this->normalizePublicScreens($data['public_screens'])
+            );
+        }
     }
 
     public function deleteById(int $id): void
@@ -266,6 +322,103 @@ final class TournamentModel
         $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
 
         return is_array($rows) ? $rows : [];
+    }
+
+    /**
+     * @return list<array{screen_key: string, is_enabled: int, sort_order: int}>
+     */
+    public function publicScreensForTournament(int $tournamentId): array
+    {
+        $pdo = $this->database->pdo();
+        $statement = $pdo->prepare(
+            'SELECT screen_key, is_enabled, sort_order
+             FROM tournament_public_screens
+             WHERE tournament_id = :tournament_id
+             ORDER BY sort_order ASC, screen_key ASC'
+        );
+        $statement->execute(['tournament_id' => $tournamentId]);
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!is_array($rows)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $screenKey = (string) ($row['screen_key'] ?? '');
+            if ($screenKey === '') {
+                continue;
+            }
+
+            $result[] = [
+                'screen_key' => $screenKey,
+                'is_enabled' => (int) ($row['is_enabled'] ?? 0),
+                'sort_order' => (int) ($row['sort_order'] ?? 1),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<string, array{is_enabled: int, sort_order: int}>|null $screensByKey
+     */
+    public function savePublicViewSettings(
+        int $tournamentId,
+        bool $publicViewEnabled,
+        bool $autoplayEnabled,
+        int $rotationIntervalSeconds,
+        string $publicTitleOverride,
+        string $publicDescription,
+        string $publicLogoPath,
+        string $publicMapUrl,
+        string $publicMapEmbedUrl,
+        ?array $screensByKey
+    ): void {
+        $pdo = $this->database->pdo();
+        $pdo->beginTransaction();
+
+        try {
+            $updateTournament = $pdo->prepare(
+                'UPDATE tournaments
+                 SET public_view_enabled = :public_view_enabled,
+                     autoplay_enabled = :autoplay_enabled,
+                     rotation_interval_seconds = :rotation_interval_seconds,
+                     public_title_override = :public_title_override,
+                     public_description = :public_description,
+                     public_logo_path = :public_logo_path,
+                     public_map_url = :public_map_url,
+                     public_map_embed_url = :public_map_embed_url,
+                     updated_at = NOW()
+                 WHERE id = :id'
+            );
+            $updateTournament->execute([
+                'public_view_enabled' => $publicViewEnabled ? 1 : 0,
+                'autoplay_enabled' => $autoplayEnabled ? 1 : 0,
+                'rotation_interval_seconds' => $rotationIntervalSeconds,
+                'public_title_override' => $this->nullIfEmpty($publicTitleOverride),
+                'public_description' => $this->nullIfEmpty($publicDescription),
+                'public_logo_path' => $this->nullIfEmpty($publicLogoPath),
+                'public_map_url' => $this->nullIfEmpty($publicMapUrl),
+                'public_map_embed_url' => $this->nullIfEmpty($publicMapEmbedUrl),
+                'id' => $tournamentId,
+            ]);
+
+            if (is_array($screensByKey)) {
+                $this->upsertPublicScreens($tournamentId, $screensByKey, $pdo);
+            }
+            $pdo->commit();
+        } catch (\Throwable $throwable) {
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+
+            throw $throwable;
+        }
     }
 
     private function syncGroupNames(int $tournamentId, int $groupCount): void
@@ -412,5 +565,78 @@ final class TournamentModel
     private function nullIfEmpty(string $value): ?string
     {
         return $value === '' ? null : $value;
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array<string, array{is_enabled: int, sort_order: int}>
+     */
+    private function normalizePublicScreens($raw): array
+    {
+        $defaults = [
+            'overview' => ['is_enabled' => 1, 'sort_order' => 1],
+            'next_matches' => ['is_enabled' => 1, 'sort_order' => 2],
+            'standings' => ['is_enabled' => 1, 'sort_order' => 3],
+            'group_schedule' => ['is_enabled' => 1, 'sort_order' => 4],
+            'knockout' => ['is_enabled' => 1, 'sort_order' => 5],
+            'recent_results' => ['is_enabled' => 1, 'sort_order' => 6],
+        ];
+
+        if (!is_array($raw)) {
+            return $defaults;
+        }
+
+        foreach ($defaults as $screenKey => $screenDefaults) {
+            $candidate = $raw[$screenKey] ?? null;
+            if (!is_array($candidate)) {
+                continue;
+            }
+
+            $isEnabled = (int) ($candidate['is_enabled'] ?? $screenDefaults['is_enabled']);
+            $sortOrder = (int) ($candidate['sort_order'] ?? $screenDefaults['sort_order']);
+            $defaults[$screenKey] = [
+                'is_enabled' => $isEnabled > 0 ? 1 : 0,
+                'sort_order' => max(1, min(99, $sortOrder)),
+            ];
+        }
+
+        return $defaults;
+    }
+
+    /**
+     * @param array<string, array{is_enabled: int, sort_order: int}> $screensByKey
+     */
+    private function upsertPublicScreens(int $tournamentId, array $screensByKey, ?PDO $pdo = null): void
+    {
+        $pdo = $pdo ?? $this->database->pdo();
+        $delete = $pdo->prepare('DELETE FROM tournament_public_screens WHERE tournament_id = :tournament_id');
+        $delete->execute(['tournament_id' => $tournamentId]);
+
+        $insert = $pdo->prepare(
+            'INSERT INTO tournament_public_screens (
+                tournament_id,
+                screen_key,
+                is_enabled,
+                sort_order,
+                created_at,
+                updated_at
+             ) VALUES (
+                :tournament_id,
+                :screen_key,
+                :is_enabled,
+                :sort_order,
+                NOW(),
+                NOW()
+             )'
+        );
+
+        foreach ($screensByKey as $screenKey => $screenSettings) {
+            $insert->execute([
+                'tournament_id' => $tournamentId,
+                'screen_key' => $screenKey,
+                'is_enabled' => (int) ($screenSettings['is_enabled'] ?? 0) > 0 ? 1 : 0,
+                'sort_order' => max(1, min(99, (int) ($screenSettings['sort_order'] ?? 1))),
+            ]);
+        }
     }
 }

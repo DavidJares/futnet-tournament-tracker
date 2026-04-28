@@ -76,6 +76,8 @@ foreach ($knockoutMatches as $index => $knockoutMatch) {
                         <th>Match</th>
                         <th>Team A</th>
                         <th>Team B</th>
+                        <th>Court</th>
+                        <th>Estimated start</th>
                         <th>Result</th>
                         <th>Status</th>
                     </tr>
@@ -105,6 +107,17 @@ foreach ($knockoutMatches as $index => $knockoutMatch) {
                         if ($teamBSource !== '' && isset($sourceLabelByCode[$teamBSource])) {
                             $teamBSourceDisplay = 'Winner of ' . $sourceLabelByCode[$teamBSource];
                         }
+                        $courtNumber = (int) ($match['court_number'] ?? 0);
+                        $estimatedStartRaw = trim((string) ($match['planned_start'] ?? ''));
+                        $estimatedStartDisplay = 'TBD';
+                        if ($estimatedStartRaw !== '') {
+                            $estimatedDateTime = \DateTimeImmutable::createFromFormat('Y-m-d H:i:s', $estimatedStartRaw);
+                            if ($estimatedDateTime instanceof \DateTimeImmutable) {
+                                $estimatedStartDisplay = $estimatedDateTime->format('H:i');
+                            } else {
+                                $estimatedStartDisplay = $estimatedStartRaw;
+                            }
+                        }
                         ?>
                         <?php $detailUrl = (string) ($match['detail_url'] ?? ''); ?>
                         <tr<?= $detailUrl !== '' ? ' class="js-match-row" data-href="' . htmlspecialchars($detailUrl, ENT_QUOTES, 'UTF-8') . '"' : '' ?>>
@@ -121,6 +134,8 @@ foreach ($knockoutMatches as $index => $knockoutMatch) {
                                     <div class="small text-muted"><?= htmlspecialchars($teamBSourceDisplay, ENT_QUOTES, 'UTF-8') ?></div>
                                 <?php endif; ?>
                             </td>
+                            <td><?= $courtNumber > 0 ? ('Court ' . $courtNumber) : 'TBD' ?></td>
+                            <td><?= htmlspecialchars($estimatedStartDisplay, ENT_QUOTES, 'UTF-8') ?></td>
                             <td><?= htmlspecialchars($resultSummary, ENT_QUOTES, 'UTF-8') ?></td>
                             <td><span class="badge <?= htmlspecialchars($statusClass, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></span></td>
                         </tr>

@@ -61,7 +61,9 @@ docs/
   - tab-like section navigation (server-rendered routes):
     - Tournament
     - Groups
-    - Matches
+    - Group Stage
+    - Knockout
+    - Public View
     - Teams
   - edit tournament settings:
     - name
@@ -80,6 +82,11 @@ docs/
     - `group_stage_mode` (`fixed_2_sets`, `best_of_3`)
     - `knockout_mode` (`fixed_2_sets`, `best_of_3`)
   - group names auto-generated as `A`, `B`, `C`, ...
+  - Public View settings:
+    - `public_view_enabled`
+    - `autoplay_enabled`
+    - `rotation_interval_seconds`
+    - per-screen enabled flag and sort order
 - Team management
   - add team
   - edit team
@@ -180,10 +187,27 @@ docs/
     - `/tournament/{slug}/admin`
     - `/tournament/{slug}/admin/groups`
     - `/tournament/{slug}/admin/matches`
+    - `/tournament/{slug}/admin/knockout`
+    - `/tournament/{slug}/admin/public_view`
     - `/tournament/{slug}/admin/teams`
   - tournament admin session is bound to one specific tournament
   - tournament admin logout at `POST /tournament/{slug}/logout`
   - superadmin session remains separate and unchanged
+- Public read-only routes (no login required)
+  - `/public/{slug}/overview`
+  - `/public/{slug}/next`
+  - `/public/{slug}/standings`
+  - `/public/{slug}/schedule`
+  - `/public/{slug}/knockout`
+  - `/public/{slug}/results`
+  - `/public/{slug}/display`
+  - routes show unavailable page when `public_view_enabled` is off
+  - each screen displays a QR code pointing to the current screen URL
+  - Overview can act as a tournament invitation/information screen with optional:
+    - public title override
+    - public description
+    - tournament logo
+    - map link button
 
 ## Database Schema (Migrations)
 
@@ -203,6 +227,16 @@ Additional migration:
   - adds nullable `teams.group_id`
   - adds FK to `tournament_groups.id` (`ON DELETE SET NULL`)
   - keeps existing teams safely as unassigned
+- `20260428_000005_public_view_settings`
+  - adds `tournaments.public_view_enabled`
+  - adds `tournaments.autoplay_enabled`
+  - adds `tournaments.rotation_interval_seconds`
+  - creates `tournament_public_screens` table for screen enabled/order config
+- `20260428_000006_public_overview_metadata`
+  - adds `tournaments.public_title_override`
+  - adds `tournaments.public_description`
+  - adds `tournaments.public_logo_path`
+  - adds `tournaments.public_map_url`
 
 ### Notes About `matches` Table
 

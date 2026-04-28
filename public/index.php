@@ -8,6 +8,7 @@ use App\Controllers\AuthController;
 use App\Controllers\AdminDashboardController;
 use App\Controllers\TournamentAdminAuthController;
 use App\Controllers\TournamentController;
+use App\Controllers\PublicViewController;
 use App\Router;
 
 $services = require __DIR__ . '/../src/bootstrap.php';
@@ -20,6 +21,7 @@ $authController = new AuthController($services);
 $adminDashboardController = new AdminDashboardController($services);
 $tournamentAdminAuthController = new TournamentAdminAuthController($services);
 $tournamentController = new TournamentController($services);
+$publicViewController = new PublicViewController($services);
 
 $router->get('/', [$homeController, 'index']);
 $router->get('/setup', [$setupController, 'index']);
@@ -49,6 +51,7 @@ $router->post('/admin/tournament/matches/{matchId}/reset', [$tournamentControlle
 $router->post('/admin/tournament/knockout/generate', [$tournamentController, 'generateKnockoutMatches']);
 $router->get('/admin/tournament/knockout/{matchId}', [$tournamentController, 'knockoutMatchDetail']);
 $router->post('/admin/tournament/knockout/{matchId}/score', [$tournamentController, 'saveKnockoutMatchScore']);
+$router->post('/admin/tournament/public-view/update', [$tournamentController, 'updatePublicView']);
 
 $router->get('/tournament/{slug}/login', [$tournamentAdminAuthController, 'loginForm']);
 $router->post('/tournament/{slug}/login', [$tournamentAdminAuthController, 'login']);
@@ -69,6 +72,15 @@ $router->post('/tournament/{slug}/admin/matches/{matchId}/reset', [$tournamentCo
 $router->post('/tournament/{slug}/admin/knockout/generate', [$tournamentController, 'generateKnockoutMatchesBySlug']);
 $router->get('/tournament/{slug}/admin/knockout/{matchId}', [$tournamentController, 'knockoutMatchDetailBySlug']);
 $router->post('/tournament/{slug}/admin/knockout/{matchId}/score', [$tournamentController, 'saveKnockoutMatchScoreBySlug']);
+$router->post('/tournament/{slug}/admin/public-view/update', [$tournamentController, 'updatePublicViewBySlug']);
+
+$router->get('/public/{slug}/overview', [$publicViewController, 'overview']);
+$router->get('/public/{slug}/next', [$publicViewController, 'nextMatches']);
+$router->get('/public/{slug}/standings', [$publicViewController, 'standings']);
+$router->get('/public/{slug}/schedule', [$publicViewController, 'schedule']);
+$router->get('/public/{slug}/knockout', [$publicViewController, 'knockout']);
+$router->get('/public/{slug}/results', [$publicViewController, 'results']);
+$router->get('/public/{slug}/display', [$publicViewController, 'display']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);

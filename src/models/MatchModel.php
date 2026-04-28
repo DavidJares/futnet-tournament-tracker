@@ -50,6 +50,76 @@ final class MatchModel
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    public function inProgressMatchesForTournament(int $tournamentId): array
+    {
+        return $this->matchesByStatusForTournament($tournamentId, 'in_progress', 20);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function nextScheduledMatchesForTournament(int $tournamentId, int $limit = 20): array
+    {
+        return $this->matchesByStatusForTournament($tournamentId, 'scheduled', max(1, $limit));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function recentFinishedMatchesForTournament(int $tournamentId, int $limit = 20): array
+    {
+        $pdo = $this->database->pdo();
+        $statement = $pdo->prepare(
+            'SELECT
+                m.id,
+                m.stage,
+                m.group_id,
+                g.name AS group_name,
+                m.round_name,
+                m.bracket_position,
+                m.team_a_id,
+                ta.team_name AS team_a_name,
+                m.team_b_id,
+                tb.team_name AS team_b_name,
+                m.team_a_source,
+                m.team_b_source,
+                m.court_number,
+                m.schedule_order,
+                m.planned_start,
+                m.status,
+                m.winner_team_id,
+                m.sets_summary_a,
+                m.sets_summary_b,
+                m.updated_at,
+                (
+                    SELECT GROUP_CONCAT(CONCAT(ms.score_a, \':\', ms.score_b) ORDER BY ms.set_number ASC SEPARATOR \', \')
+                    FROM match_sets ms
+                    WHERE ms.match_id = m.id
+                ) AS set_scores_summary
+             FROM matches m
+             LEFT JOIN tournament_groups g ON g.id = m.group_id
+             LEFT JOIN teams ta ON ta.id = m.team_a_id
+             LEFT JOIN teams tb ON tb.id = m.team_b_id
+             WHERE m.tournament_id = :tournament_id
+               AND m.status = :status
+             ORDER BY
+                CASE WHEN m.updated_at IS NULL THEN 1 ELSE 0 END,
+                m.updated_at DESC,
+                m.id DESC
+             LIMIT :limit_rows'
+        );
+        $statement->bindValue(':tournament_id', $tournamentId, PDO::PARAM_INT);
+        $statement->bindValue(':status', 'finished', PDO::PARAM_STR);
+        $statement->bindValue(':limit_rows', max(1, $limit), PDO::PARAM_INT);
+        $statement->execute();
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        return is_array($rows) ? $rows : [];
+    }
+
+    /**
      * @return array<string, mixed>|null
      */
     public function findGroupMatchDetailForTournament(int $tournamentId, int $matchId): ?array
@@ -201,6 +271,8 @@ final class MatchModel
                 tb.team_name AS team_b_name,
                 m.team_a_source,
                 m.team_b_source,
+                m.court_number,
+                m.planned_start,
                 m.status,
                 m.winner_team_id,
                 m.sets_summary_a,
@@ -586,7 +658,9 @@ final class MatchModel
      *     team_b_id: int|null,
      *     team_a_source: string|null,
      *     team_b_source: string|null,
-     *     status: string
+     *     status: string,
+     *     court_number?: int|null,
+     *     planned_start?: string|null
      * }> $matches
      */
     public function replaceKnockoutMatches(int $tournamentId, array $matches): void
@@ -636,9 +710,9 @@ final class MatchModel
                         :team_b_id,
                         :team_a_source,
                         :team_b_source,
+                        :court_number,
                         NULL,
-                        NULL,
-                        NULL,
+                        :planned_start,
                         :status,
                         NULL,
                         0,
@@ -687,6 +761,20 @@ final class MatchModel
                         $status = 'pending';
                     }
                     $insert->bindValue(':status', $status, PDO::PARAM_STR);
+
+                    $courtNumber = $match['court_number'] ?? null;
+                    if (is_int($courtNumber) && $courtNumber > 0) {
+                        $insert->bindValue(':court_number', $courtNumber, PDO::PARAM_INT);
+                    } else {
+                        $insert->bindValue(':court_number', null, PDO::PARAM_NULL);
+                    }
+
+                    $plannedStart = $match['planned_start'] ?? null;
+                    if (is_string($plannedStart) && trim($plannedStart) !== '') {
+                        $insert->bindValue(':planned_start', $plannedStart, PDO::PARAM_STR);
+                    } else {
+                        $insert->bindValue(':planned_start', null, PDO::PARAM_NULL);
+                    }
 
                     $insert->execute();
                 }
@@ -900,5 +988,60 @@ final class MatchModel
 
             throw $throwable;
         }
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function matchesByStatusForTournament(int $tournamentId, string $status, int $limit): array
+    {
+        $pdo = $this->database->pdo();
+        $statement = $pdo->prepare(
+            'SELECT
+                m.id,
+                m.stage,
+                m.group_id,
+                g.name AS group_name,
+                m.round_name,
+                m.bracket_position,
+                m.team_a_id,
+                ta.team_name AS team_a_name,
+                m.team_b_id,
+                tb.team_name AS team_b_name,
+                m.team_a_source,
+                m.team_b_source,
+                m.court_number,
+                m.schedule_order,
+                m.planned_start,
+                m.status,
+                m.winner_team_id,
+                m.sets_summary_a,
+                m.sets_summary_b,
+                (
+                    SELECT GROUP_CONCAT(CONCAT(ms.score_a, \':\', ms.score_b) ORDER BY ms.set_number ASC SEPARATOR \', \')
+                    FROM match_sets ms
+                    WHERE ms.match_id = m.id
+                ) AS set_scores_summary
+             FROM matches m
+             LEFT JOIN tournament_groups g ON g.id = m.group_id
+             LEFT JOIN teams ta ON ta.id = m.team_a_id
+             LEFT JOIN teams tb ON tb.id = m.team_b_id
+             WHERE m.tournament_id = :tournament_id
+               AND m.status = :status
+             ORDER BY
+                CASE WHEN m.planned_start IS NULL THEN 1 ELSE 0 END,
+                m.planned_start ASC,
+                CASE WHEN m.schedule_order IS NULL THEN 1 ELSE 0 END,
+                m.schedule_order ASC,
+                m.id ASC
+             LIMIT :limit_rows'
+        );
+        $statement->bindValue(':tournament_id', $tournamentId, PDO::PARAM_INT);
+        $statement->bindValue(':status', $status, PDO::PARAM_STR);
+        $statement->bindValue(':limit_rows', max(1, $limit), PDO::PARAM_INT);
+        $statement->execute();
+        $rows = $statement->fetchAll(PDO::FETCH_ASSOC);
+
+        return is_array($rows) ? $rows : [];
     }
 }
