@@ -36,6 +36,40 @@ BracketBird is built for small and medium local tournaments that need a practica
 5. Open `/setup` and create the first superadmin.
 6. Sign in at `/admin/login`.
 
+## 🚀 Deployment (Shared Hosting)
+
+BracketBird is designed to run on standard shared hosting (e.g. Wedos, Websupport).
+
+### Basic steps
+
+1. Upload project files (FTP or Git)
+2. Create MySQL database
+3. Create config file:
+
+   `src/config/local.php`
+
+4. Fill database credentials:
+```php
+return [
+    'db' => [
+        'host' => 'localhost',
+        'name' => 'DB_NAME',
+        'user' => 'DB_USER',
+        'pass' => 'DB_PASS',
+        'charset' => 'utf8mb4',
+    ],
+];
+
+5. Set environment:
+   `APP_ENV=prod`
+6. Run migrations:
+via CLI:
+   `php scripts/migrate.php`
+or temporarily via browser (if CLI is not available)
+7. Open:
+   `/setup`
+8. Create first superadmin
+
 ## Security Summary
 
 - CSRF protection on POST actions
