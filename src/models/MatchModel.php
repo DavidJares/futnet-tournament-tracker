@@ -276,7 +276,12 @@ final class MatchModel
                 m.status,
                 m.winner_team_id,
                 m.sets_summary_a,
-                m.sets_summary_b
+                m.sets_summary_b,
+                (
+                    SELECT GROUP_CONCAT(CONCAT(ms.score_a, \':\', ms.score_b) ORDER BY ms.set_number ASC SEPARATOR \', \')
+                    FROM match_sets ms
+                    WHERE ms.match_id = m.id
+                ) AS set_scores_summary
              FROM matches m
              LEFT JOIN teams ta ON ta.id = m.team_a_id
              LEFT JOIN teams tb ON tb.id = m.team_b_id
