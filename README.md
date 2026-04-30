@@ -59,6 +59,7 @@ return [
         'charset' => 'utf8mb4',
     ],
 ];
+```
 
 5. Set environment:
    `APP_ENV=prod`
