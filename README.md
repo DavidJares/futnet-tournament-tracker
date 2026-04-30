@@ -62,13 +62,20 @@ return [
 ```
 
 5. Set environment:
+
    `APP_ENV=prod`
+
 6. Run migrations:
-via CLI:
+
+   via CLI:
+
    `php scripts/migrate.php`
+
 or temporarily via browser (if CLI is not available)
 7. Open:
+
    `/setup`
+   
 8. Create first superadmin
 
 ## Security Summary
