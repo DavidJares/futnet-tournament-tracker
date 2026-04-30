@@ -12,7 +12,29 @@ use App\Controllers\PublicViewController;
 use App\Router;
 
 $services = require __DIR__ . '/../src/bootstrap.php';
+$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+    || ((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => $isHttps,
+    'httponly' => true,
+    'samesite' => 'Lax',
+]);
 session_start();
+
+$appEnv = strtolower((string) ($services['config']['app']['env'] ?? 'prod'));
+$displayErrors = $appEnv === 'dev' || $appEnv === 'local';
+ini_set('display_errors', $displayErrors ? '1' : '0');
+ini_set('display_startup_errors', $displayErrors ? '1' : '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('X-Frame-Options: SAMEORIGIN');
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://api.qrserver.com; frame-src https://www.google.com https://www.google.com/maps; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
 
 $router = new Router();
 $homeController = new HomeController($services);
@@ -105,6 +127,23 @@ if ($path === '/index.php') {
 
 if (!is_string($path) || $path === '') {
     $path = '/';
+}
+
+if (strtoupper($method) === 'POST') {
+    $sessionToken = $_SESSION['_csrf_token'] ?? '';
+    $postedToken = $_POST['_csrf_token'] ?? '';
+    if (
+        !is_string($sessionToken)
+        || $sessionToken === ''
+        || !is_string($postedToken)
+        || $postedToken === ''
+        || !hash_equals($sessionToken, $postedToken)
+    ) {
+        http_response_code(403);
+        header('Content-Type: text/html; charset=utf-8');
+        echo '403 Forbidden';
+        exit;
+    }
 }
 
 $router->dispatch($method, $path);

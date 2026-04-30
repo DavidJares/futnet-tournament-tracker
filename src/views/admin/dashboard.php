@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 /** @var list<array<string, mixed>> $tournaments */
 /** @var list<string> $matchModes */
+$modeLabels = [
+    'fixed_2_sets' => 'Fixed 2 sets',
+    'best_of_3' => 'Best of 3',
+];
 ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 m-0">Tournaments</h1>
@@ -38,14 +42,16 @@ declare(strict_types=1);
                             $eventDate = (string) ($tournament['event_date'] ?? '');
                             $groupMode = (string) ($tournament['group_stage_mode'] ?? ($tournament['match_mode'] ?? ''));
                             $knockoutMode = (string) ($tournament['knockout_mode'] ?? 'best_of_3');
+                            $groupModeLabel = (string) ($modeLabels[$groupMode] ?? $groupMode);
+                            $knockoutModeLabel = (string) ($modeLabels[$knockoutMode] ?? $knockoutMode);
                             ?>
                             <tr>
                                 <td><?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></td>
                                 <td><code><?= htmlspecialchars($slug, ENT_QUOTES, 'UTF-8') ?></code></td>
                                 <td><?= htmlspecialchars($eventDate !== '' ? $eventDate : '-', ENT_QUOTES, 'UTF-8') ?></td>
                                 <td>
-                                    <span class="badge bg-secondary">G: <?= htmlspecialchars($groupMode, ENT_QUOTES, 'UTF-8') ?></span>
-                                    <span class="badge bg-dark">KO: <?= htmlspecialchars($knockoutMode, ENT_QUOTES, 'UTF-8') ?></span>
+                                    <span class="badge bg-secondary">G: <?= htmlspecialchars($groupModeLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                                    <span class="badge bg-dark">KO: <?= htmlspecialchars($knockoutModeLabel, ENT_QUOTES, 'UTF-8') ?></span>
                                 </td>
                                 <td class="text-end">
                                     <a class="btn btn-sm btn-outline-primary" href="<?= htmlspecialchars($url('/admin/tournament?id=' . $tournamentId), ENT_QUOTES, 'UTF-8') ?>">Detail</a>
@@ -121,7 +127,7 @@ declare(strict_types=1);
                         <label for="group_stage_mode" class="form-label">Group stage mode</label>
                         <select class="form-select" name="group_stage_mode" id="group_stage_mode" required>
                             <?php foreach ($matchModes as $mode): ?>
-                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>" <?= $mode === 'fixed_2_sets' ? 'selected' : '' ?>><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></option>
+                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>" <?= $mode === 'fixed_2_sets' ? 'selected' : '' ?>><?= htmlspecialchars((string) ($modeLabels[$mode] ?? $mode), ENT_QUOTES, 'UTF-8') ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
@@ -129,7 +135,7 @@ declare(strict_types=1);
                         <label for="knockout_mode" class="form-label">Knockout mode</label>
                         <select class="form-select" name="knockout_mode" id="knockout_mode" required>
                             <?php foreach ($matchModes as $mode): ?>
-                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>" <?= $mode === 'best_of_3' ? 'selected' : '' ?>><?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?></option>
+                                <option value="<?= htmlspecialchars($mode, ENT_QUOTES, 'UTF-8') ?>" <?= $mode === 'best_of_3' ? 'selected' : '' ?>><?= htmlspecialchars((string) ($modeLabels[$mode] ?? $mode), ENT_QUOTES, 'UTF-8') ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>

@@ -37,9 +37,42 @@ docs/
 2. Fill database credentials in `src/config/local.php`.
 3. Run migrations:
    - `php scripts/migrate.php`
-4. Point web server document root to `public/`.
+4. Point web server document root to `public/` (recommended).
+   - If shared hosting cannot set this, keep the root-level `.htaccess` and root `index.php` in place so requests are redirected safely to `public/`.
 5. Open `/setup` and create the first superadmin account.
 6. Sign in at `/admin/login`.
+
+## Security & Deployment Checklist (Pre-Production)
+
+1. Upload project files.
+2. Set document root to `public/` (best option).
+3. If document root must stay at repo root:
+   - keep root `.htaccess` enabled
+   - verify directory listing is disabled
+   - verify direct access to `src/`, `storage/`, `scripts/`, `docs/` is blocked
+4. Create production database/user with least privileges.
+5. Create `src/config/local.php` on server (do not commit it).
+6. Set production env:
+   - `APP_ENV=prod`
+   - `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`
+7. Run migrations:
+   - `php scripts/migrate.php`
+8. Create first superadmin via `/setup`.
+9. Verify `/setup` is unavailable after first superadmin exists.
+10. Verify public routes and admin logins.
+11. Verify CSRF protection on admin actions (POST without token returns `403`).
+12. Verify upload hardening:
+   - only PNG/JPG/WEBP accepted
+   - max size enforced
+   - no script execution in `public/uploads/`
+13. Verify production error behavior:
+   - no stack traces shown to end users
+   - errors are logged server-side
+14. Verify security headers are present:
+   - `X-Content-Type-Options`
+   - `Referrer-Policy`
+   - `X-Frame-Options`
+   - `Content-Security-Policy`
 
 ## MVP Features Implemented
 

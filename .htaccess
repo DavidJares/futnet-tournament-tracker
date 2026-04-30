@@ -1,0 +1,10 @@
+Options -Indexes
+RewriteEngine On
+
+# Block direct access to internal project directories when docroot points here.
+RewriteRule ^(src|storage|scripts|docs|migrations|config)(/|$) - [F,L,NC]
+RewriteRule ^\. - [F,L]
+
+# Redirect everything to the public front controller.
+RewriteRule ^$ public/index.php [L]
+RewriteRule (.*) public/$1 [L]

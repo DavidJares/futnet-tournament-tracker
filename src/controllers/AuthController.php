@@ -26,6 +26,11 @@ final class AuthController extends BaseController
 
     public function login(): void
     {
+        if ($this->isLoginRateLimited('superadmin')) {
+            $this->setFlash('error', 'Invalid credentials.');
+            $this->redirect('/admin/login');
+        }
+
         $superadminModel = new SuperadminModel($this->db());
         if (!$superadminModel->tableExists() || !$superadminModel->hasAny()) {
             $this->redirect('/setup');
@@ -41,6 +46,7 @@ final class AuthController extends BaseController
 
         $superadmin = $superadminModel->findByUsername($username);
         if ($superadmin === null || !password_verify($password, (string) $superadmin['password_hash'])) {
+            $this->recordLoginFailure('superadmin');
             $this->setFlash('error', 'Invalid credentials.');
             $this->redirect('/admin/login');
         }
@@ -50,6 +56,7 @@ final class AuthController extends BaseController
             'id' => (int) $superadmin['id'],
             'username' => (string) $superadmin['username'],
         ];
+        $this->resetLoginThrottle('superadmin');
 
         $this->setFlash('success', 'You are signed in.');
         $this->redirect('/admin/dashboard');

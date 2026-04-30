@@ -40,6 +40,12 @@ final class TournamentAdminAuthController extends BaseController
     public function login(): void
     {
         $slug = $this->requestRouteString('slug');
+        $rateScope = 'tournament_admin:' . $slug;
+        if ($this->isLoginRateLimited($rateScope)) {
+            $this->setFlash('error', 'Invalid credentials.');
+            $this->redirect('/tournament/' . $slug . '/login');
+        }
+
         $tournamentModel = new TournamentModel($this->db());
         $tournament = $tournamentModel->findAuthBySlug($slug);
 
@@ -57,7 +63,8 @@ final class TournamentAdminAuthController extends BaseController
         }
 
         if (!password_verify($password, (string) $tournament['admin_password_hash'])) {
-            $this->setFlash('error', 'Invalid tournament password.');
+            $this->recordLoginFailure($rateScope);
+            $this->setFlash('error', 'Invalid credentials.');
             $this->redirect('/tournament/' . $slug . '/login');
         }
 
@@ -67,6 +74,7 @@ final class TournamentAdminAuthController extends BaseController
             'slug' => (string) $tournament['slug'],
             'name' => (string) $tournament['name'],
         ];
+        $this->resetLoginThrottle($rateScope);
 
         $this->setFlash('success', 'Tournament admin access granted.');
         $this->redirect('/tournament/' . $slug . '/admin');
@@ -76,6 +84,7 @@ final class TournamentAdminAuthController extends BaseController
     {
         $slug = $this->requestRouteString('slug');
         unset($_SESSION['tournament_admin']);
+        session_regenerate_id(true);
 
         $this->setFlash('success', 'Tournament admin signed out.');
         $this->redirect('/tournament/' . $slug . '/login');

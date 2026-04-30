@@ -22,7 +22,10 @@ final class SetupController extends BaseController
         }
 
         if ($superadminModel->hasAny()) {
-            $this->redirect('/admin/login');
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '404 Not Found';
+            return;
         }
 
         $this->render('setup/index', [
@@ -43,7 +46,10 @@ final class SetupController extends BaseController
         }
 
         if ($superadminModel->hasAny()) {
-            $this->redirect('/admin/login');
+            http_response_code(404);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '404 Not Found';
+            return;
         }
 
         $username = $this->requestPostString('username');

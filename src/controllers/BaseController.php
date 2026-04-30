@@ -33,6 +33,8 @@ abstract class BaseController
 
         $config = $this->services['config'] ?? [];
         $flash = $this->pullFlash();
+        $csrfToken = $this->csrfToken();
+        $csrfField = fn (): string => $this->csrfField();
         $currentSuperadmin = $this->currentSuperadmin();
         $currentTournamentAdmin = $this->currentTournamentAdmin();
         $url = fn (string $path = '/'): string => $this->url($path);
@@ -120,6 +122,105 @@ abstract class BaseController
         $_SESSION['flash'] = [
             'type' => $type,
             'message' => $message,
+        ];
+    }
+
+    protected function csrfToken(): string
+    {
+        $token = $_SESSION['_csrf_token'] ?? '';
+        if (is_string($token) && $token !== '') {
+            return $token;
+        }
+
+        $token = bin2hex(random_bytes(32));
+        $_SESSION['_csrf_token'] = $token;
+
+        return $token;
+    }
+
+    protected function csrfField(): string
+    {
+        return '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars($this->csrfToken(), ENT_QUOTES, 'UTF-8') . '">';
+    }
+
+    protected function requireCsrfToken(): void
+    {
+        $sessionToken = $_SESSION['_csrf_token'] ?? '';
+        $postedToken = $_POST['_csrf_token'] ?? '';
+        if (
+            !is_string($sessionToken)
+            || $sessionToken === ''
+            || !is_string($postedToken)
+            || $postedToken === ''
+            || !hash_equals($sessionToken, $postedToken)
+        ) {
+            http_response_code(403);
+            header('Content-Type: text/html; charset=utf-8');
+            echo '403 Forbidden';
+            exit;
+        }
+    }
+
+    protected function isLoginRateLimited(string $scope, int $maxAttempts = 5, int $lockSeconds = 300): bool
+    {
+        $state = $this->loginThrottleState($scope);
+        $now = time();
+        $lockedUntil = (int) ($state['locked_until'] ?? 0);
+        if ($lockedUntil > $now) {
+            return true;
+        }
+
+        if ($lockedUntil > 0 && $lockedUntil <= $now) {
+            $this->resetLoginThrottle($scope);
+        }
+
+        return false;
+    }
+
+    protected function recordLoginFailure(string $scope, int $maxAttempts = 5, int $lockSeconds = 300): void
+    {
+        $state = $this->loginThrottleState($scope);
+        $attempts = (int) ($state['attempts'] ?? 0);
+        $attempts++;
+
+        $updated = [
+            'attempts' => $attempts,
+            'locked_until' => 0,
+        ];
+        if ($attempts >= $maxAttempts) {
+            $updated['locked_until'] = time() + $lockSeconds;
+        }
+
+        $_SESSION['_login_throttle'][$scope] = $updated;
+    }
+
+    protected function resetLoginThrottle(string $scope): void
+    {
+        if (!isset($_SESSION['_login_throttle']) || !is_array($_SESSION['_login_throttle'])) {
+            return;
+        }
+
+        unset($_SESSION['_login_throttle'][$scope]);
+    }
+
+    /**
+     * @return array{attempts:int,locked_until:int}
+     */
+    private function loginThrottleState(string $scope): array
+    {
+        $store = $_SESSION['_login_throttle'] ?? null;
+        if (!is_array($store)) {
+            return ['attempts' => 0, 'locked_until' => 0];
+        }
+
+        $raw = $store[$scope] ?? null;
+        if (!is_array($raw)) {
+            return ['attempts' => 0, 'locked_until' => 0];
+        }
+
+        return [
+            'attempts' => (int) ($raw['attempts'] ?? 0),
+            'locked_until' => (int) ($raw['locked_until'] ?? 0),
         ];
     }
 

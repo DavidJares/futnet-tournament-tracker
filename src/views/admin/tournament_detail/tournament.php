@@ -18,6 +18,12 @@ $modeLabels = [
 ];
 $currentSlug = (string) ($tournament['slug'] ?? '');
 $currentName = (string) ($tournament['name'] ?? '');
+$isHttps = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+    || ((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+$scheme = $isHttps ? 'https' : 'http';
+$host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+$loginPath = $url('/tournament/' . $currentSlug . '/login');
+$currentLoginUrl = $scheme . '://' . $host . $loginPath;
 ?>
 <div class="card shadow-sm">
     <div class="card-body">
@@ -35,6 +41,21 @@ $currentName = (string) ($tournament['name'] ?? '');
                     <button type="button" class="btn btn-outline-secondary js-copy-slug" data-copy-target="slug_display">Copy</button>
                 </div>
                 <div class="form-text">Slug is read-only by default.</div>
+            </div>
+            <div class="mb-2">
+                <label for="tournament_login_url" class="form-label">Tournament admin login URL</label>
+                <div class="input-group">
+                    <input
+                        type="text"
+                        id="tournament_login_url"
+                        class="form-control bg-body-tertiary text-muted border-secondary-subtle"
+                        readonly
+                        value="<?= htmlspecialchars($currentLoginUrl, ENT_QUOTES, 'UTF-8') ?>"
+                        aria-readonly="true"
+                    >
+                    <button type="button" class="btn btn-outline-secondary js-copy-slug" data-copy-target="tournament_login_url">Copy</button>
+                    <a id="tournament_login_url_open" class="btn btn-outline-secondary" href="<?= htmlspecialchars($currentLoginUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">Open</a>
+                </div>
             </div>
             <div id="js-slug-options" class="mb-2 d-none">
                 <div class="alert alert-warning py-2 mb-2 small" role="alert">
@@ -131,6 +152,10 @@ $currentName = (string) ($tournament['name'] ?? '');
         var keepOption = document.getElementById('slug_update_action_keep');
         var updateOption = document.getElementById('slug_update_action_update');
         var fallbackAction = document.getElementById('slug_update_action_fallback');
+        var loginUrlInput = document.getElementById('tournament_login_url');
+        var loginUrlOpen = document.getElementById('tournament_login_url_open');
+        var loginUrlPrefix = <?= json_encode($scheme . '://' . $host . $url('/tournament/'), JSON_UNESCAPED_SLASHES) ?>;
+        var loginUrlSuffix = '/login';
         var currentSlug = slugInput ? (slugInput.value || '').trim() : '';
         var originalName = nameInput ? (nameInput.getAttribute('data-original-name') || '').trim() : '';
 
@@ -157,9 +182,26 @@ $currentName = (string) ($tournament['name'] ?? '');
                 keepOption.checked = true;
                 fallbackAction.name = 'slug_update_action';
                 fallbackAction.value = 'keep';
+                syncLoginUrlPreview(currentSlug);
                 return;
             }
             fallbackAction.removeAttribute('name');
+            syncLoginUrlPreview(updateOption.checked ? (generated !== '' ? generated : 'tournament') : currentSlug);
+        };
+
+        var syncLoginUrlPreview = function (slugValue) {
+            if (!loginUrlInput || !loginUrlOpen) {
+                return;
+            }
+
+            var safeSlug = (slugValue || '').trim();
+            if (safeSlug === '') {
+                safeSlug = 'tournament';
+            }
+
+            var fullUrl = loginUrlPrefix + safeSlug + loginUrlSuffix;
+            loginUrlInput.value = fullUrl;
+            loginUrlOpen.setAttribute('href', fullUrl);
         };
 
         if (nameInput) {
@@ -171,6 +213,7 @@ $currentName = (string) ($tournament['name'] ?? '');
         if (updateOption) {
             updateOption.addEventListener('change', syncSlugChoice);
         }
+        syncLoginUrlPreview(currentSlug);
         syncSlugChoice();
 
         document.querySelectorAll('.js-copy-slug').forEach(function (button) {

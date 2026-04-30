@@ -1,4 +1,5 @@
 RewriteEngine On
+Options -Indexes
 
 # Serve existing files/directories directly.
 RewriteCond %{REQUEST_FILENAME} -f [OR]

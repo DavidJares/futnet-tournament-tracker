@@ -1764,6 +1764,10 @@ final class TournamentController extends BaseController
             $this->setFlash('error', 'Map URL must be a valid absolute URL.');
             $this->redirect($redirectPath);
         }
+        if ($publicMapUrl !== '' && !preg_match('#^https?://#i', $publicMapUrl)) {
+            $this->setFlash('error', 'Map URL must start with http:// or https://.');
+            $this->redirect($redirectPath);
+        }
         $publicMapEmbedInput = trim($this->requestPostString('public_map_embed_url'));
         $publicMapEmbedUrl = $this->extractPublicMapEmbedUrl($publicMapEmbedInput);
         if ($publicMapEmbedInput !== '' && $publicMapEmbedUrl === null) {
@@ -1862,8 +1866,28 @@ final class TournamentController extends BaseController
             return ['error' => 'Logo file size must be up to 2 MB.'];
         }
 
-        $fileInfo = @getimagesize($tmpName);
-        $mimeType = is_array($fileInfo) ? strtolower((string) ($fileInfo['mime'] ?? '')) : '';
+        $originalName = (string) ($logoUpload['name'] ?? '');
+        $extensionFromName = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+        if (!in_array($extensionFromName, ['png', 'jpg', 'jpeg', 'webp'], true)) {
+            return ['error' => 'Logo file extension must be PNG, JPG, or WEBP.'];
+        }
+
+        $mimeType = '';
+        if (function_exists('finfo_open') && function_exists('finfo_file')) {
+            $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+            if ($finfo !== false) {
+                $detected = @finfo_file($finfo, $tmpName);
+                @finfo_close($finfo);
+                if (is_string($detected)) {
+                    $mimeType = strtolower(trim($detected));
+                }
+            }
+        }
+
+        if ($mimeType === '') {
+            $fileInfo = @getimagesize($tmpName);
+            $mimeType = is_array($fileInfo) ? strtolower((string) ($fileInfo['mime'] ?? '')) : '';
+        }
         $extensionByMime = [
             'image/png' => 'png',
             'image/jpeg' => 'jpg',
@@ -1878,6 +1902,13 @@ final class TournamentController extends BaseController
         $uploadDirectory = $publicRoot . '/uploads/tournament_logos';
         if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
             return ['error' => 'Could not create logo upload directory.'];
+        }
+        $uploadHtaccess = $uploadDirectory . '/.htaccess';
+        if (!is_file($uploadHtaccess)) {
+            @file_put_contents(
+                $uploadHtaccess,
+                "Options -Indexes\n<FilesMatch \"\\.(php|phtml|phar|cgi|pl|asp|aspx|jsp|sh)$\">\n    Require all denied\n</FilesMatch>\n"
+            );
         }
 
         $random = bin2hex(random_bytes(8));

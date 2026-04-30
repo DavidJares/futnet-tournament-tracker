@@ -5,6 +5,7 @@ declare(strict_types=1);
 return [
     'app' => [
         'name' => 'FTT',
+        'env' => getenv('APP_ENV') ?: 'prod',
     ],
     'db' => [
         'host' => getenv('DB_HOST') ?: '127.0.0.1',

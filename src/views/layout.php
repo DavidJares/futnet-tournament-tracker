@@ -29,6 +29,7 @@ if ($flashType === 'error') {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= htmlspecialchars($pageTitle, ENT_QUOTES, 'UTF-8') ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <meta name="csrf-token" content="<?= htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') ?>">
 </head>
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
@@ -39,11 +40,13 @@ if ($flashType === 'error') {
             <?php if (is_array($currentSuperadmin ?? null)): ?>
                 <span class="text-light small"><?= htmlspecialchars((string) $currentSuperadmin['username'], ENT_QUOTES, 'UTF-8') ?></span>
                 <form method="post" action="<?= htmlspecialchars($url('/admin/logout'), ENT_QUOTES, 'UTF-8') ?>" class="m-0">
+                    <?= $csrfField() ?>
                     <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
                 </form>
             <?php elseif (is_array($currentTournamentAdmin ?? null)): ?>
                 <span class="text-light small"><?= htmlspecialchars((string) ($currentTournamentAdmin['name'] ?? 'Tournament admin'), ENT_QUOTES, 'UTF-8') ?></span>
                 <form method="post" action="<?= htmlspecialchars($url('/tournament/' . (string) ($currentTournamentAdmin['slug'] ?? '') . '/logout'), ENT_QUOTES, 'UTF-8') ?>" class="m-0">
+                    <?= $csrfField() ?>
                     <button type="submit" class="btn btn-sm btn-outline-light">Logout</button>
                 </form>
             <?php endif; ?>
@@ -58,7 +61,14 @@ if ($flashType === 'error') {
         </div>
     <?php endif; ?>
 
-    <?php require $viewFile; ?>
+    <?php
+    ob_start();
+    require $viewFile;
+    $viewOutput = (string) ob_get_clean();
+    $csrfInput = '<input type="hidden" name="_csrf_token" value="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '">';
+    $viewOutput = preg_replace('/(<form\b[^>]*\bmethod\s*=\s*["\']post["\'][^>]*>)/i', '$1' . $csrfInput, $viewOutput) ?? $viewOutput;
+    echo $viewOutput;
+    ?>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
