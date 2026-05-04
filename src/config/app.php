@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 return [
     'app' => [
-        'name' => 'FTT',
+        'name' => 'BracketBird',
         'env' => getenv('APP_ENV') ?: 'prod',
+        'base_path' => getenv('APP_BASE_PATH') ?: null,
     ],
     'db' => [
         'host' => getenv('DB_HOST') ?: '127.0.0.1',

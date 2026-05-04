@@ -48,11 +48,11 @@ If hosting forces document root to project root:
 2. Create dedicated DB user with least privileges required by the app.
 3. Grant access only to BracketBird database.
 
-## 6. Configuration (`src/config/local.php`)
+## 6. Configuration (`src/Config/local.php`)
 
-Create `src/config/local.php` on server (never commit it).
+Create `src/Config/local.php` on server (never commit it).
 
-Use `src/config/local.example.php` as template.
+Use `src/Config/local.example.php` as template.
 
 Typical values:
 
@@ -139,7 +139,7 @@ After first account exists, `/setup` must be unavailable (returns minimal 404 be
 
 ## "Database credentials are not configured."
 
-- Verify `src/config/local.php` exists on server.
+- Verify `src/Config/local.php` exists on server.
 - Verify DB values and/or environment variables are correct.
 
 ## Migrations not applied

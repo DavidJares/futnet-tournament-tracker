@@ -28,8 +28,8 @@ BracketBird is built for small and medium local tournaments that need a practica
 ## Quick Start (Local)
 
 1. Copy local config:
-   - `src/config/local.example.php` -> `src/config/local.php`
-2. Fill DB credentials in `src/config/local.php`.
+   - `src/Config/local.example.php` -> `src/Config/local.php`
+2. Fill DB credentials in `src/Config/local.php`.
 3. Run migrations:
    - `php scripts/migrate.php`
 4. Configure web root to `public/`.

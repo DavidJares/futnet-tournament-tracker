@@ -8,7 +8,7 @@ $services = require __DIR__ . '/../src/bootstrap.php';
 
 try {
     $migrationModel = new MigrationModel($services['db']);
-    $applied = $migrationModel->migrate(__DIR__ . '/../src/migrations');
+    $applied = $migrationModel->migrate(__DIR__ . '/../src/Migrations');
 
     echo sprintf("Migrations done. Applied: %d\n", $applied);
     exit(0);

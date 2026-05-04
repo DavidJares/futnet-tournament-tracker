@@ -25,11 +25,11 @@ public/
 src/
   bootstrap.php          # Autoload + service bootstrapping
   Router.php             # Lightweight router
-  config/                # app + local config
-  controllers/           # Request handlers
-  models/                # Database access layer
-  views/                 # Server-rendered templates
-  migrations/            # Schema migration files
+  Config/                # app + local config
+  Controllers/           # Request handlers
+  Models/                # Database access layer
+  Views/                 # Server-rendered templates
+  Migrations/            # Schema migration files
 scripts/
   migrate.php            # Migration runner
 storage/                 # Runtime storage (non-public)

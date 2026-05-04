@@ -106,9 +106,28 @@ $router->get('/public/{slug}/display', [$publicViewController, 'display']);
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $requestUriPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
-$scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php');
-$scriptDirectory = str_replace('\\', '/', dirname($scriptName));
-$scriptDirectory = $scriptDirectory === '/' || $scriptDirectory === '.' ? '' : rtrim($scriptDirectory, '/');
+$configuredBasePath = null;
+$rawBasePath = $services['config']['app']['base_path'] ?? null;
+if (is_string($rawBasePath)) {
+    $rawBasePath = trim($rawBasePath);
+    if ($rawBasePath === '') {
+        $configuredBasePath = '';
+    } else {
+        $configuredBasePath = '/' . trim($rawBasePath, '/');
+        if ($configuredBasePath === '/') {
+            $configuredBasePath = '';
+        }
+    }
+}
+
+$scriptDirectory = '';
+if ($configuredBasePath !== null) {
+    $scriptDirectory = $configuredBasePath;
+} else {
+    $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php');
+    $scriptDirectory = str_replace('\\', '/', dirname($scriptName));
+    $scriptDirectory = $scriptDirectory === '/' || $scriptDirectory === '.' ? '' : rtrim($scriptDirectory, '/');
+}
 
 $path = is_string($requestUriPath) && $requestUriPath !== '' ? $requestUriPath : '/';
 

@@ -1,4 +1,4 @@
-/src/config/local.php
+/src/Config/local.php
 /storage/*.log
 /storage/*.sqlite
 /storage/cache/

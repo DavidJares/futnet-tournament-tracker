@@ -12,14 +12,31 @@ spl_autoload_register(static function (string $class): void {
     }
 
     $relativeClass = substr($class, strlen($prefix));
-    $file = __DIR__ . '/' . str_replace('\\', '/', $relativeClass) . '.php';
+    $relativePath = str_replace('\\', '/', $relativeClass) . '.php';
+    $candidates = [
+        __DIR__ . '/' . $relativePath,
+    ];
 
-    if (is_file($file)) {
+    $segments = explode('/', $relativePath);
+    if (isset($segments[0]) && $segments[0] !== '') {
+        $segmentsLowerFirst = $segments;
+        $segmentsLowerFirst[0] = strtolower($segmentsLowerFirst[0]);
+        $candidates[] = __DIR__ . '/' . implode('/', $segmentsLowerFirst);
+    }
+
+    $candidates[] = __DIR__ . '/' . strtolower($relativePath);
+
+    foreach ($candidates as $file) {
+        if (!is_file($file)) {
+            continue;
+        }
+
         require $file;
+        return;
     }
 });
 
-$config = Config::load(__DIR__ . '/config');
+$config = Config::load(__DIR__ . '/Config');
 
 return [
     'config' => $config,

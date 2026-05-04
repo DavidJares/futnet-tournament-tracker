@@ -26,7 +26,7 @@ abstract class BaseController
      */
     protected function render(string $view, array $data = []): void
     {
-        $viewFile = __DIR__ . '/../views/' . $view . '.php';
+        $viewFile = __DIR__ . '/../Views/' . $view . '.php';
         if (!is_file($viewFile)) {
             throw new \RuntimeException(sprintf('View "%s" not found.', $view));
         }
@@ -40,7 +40,7 @@ abstract class BaseController
         $url = fn (string $path = '/'): string => $this->url($path);
         extract($data, EXTR_SKIP);
 
-        require __DIR__ . '/../views/layout.php';
+        require __DIR__ . '/../Views/layout.php';
     }
 
     protected function redirect(string $path): void
@@ -70,6 +70,11 @@ abstract class BaseController
 
     protected function basePath(): string
     {
+        $configuredBasePath = $this->configuredBasePath();
+        if ($configuredBasePath !== null) {
+            return $configuredBasePath;
+        }
+
         $scriptName = (string) ($_SERVER['SCRIPT_NAME'] ?? '/index.php');
         $basePath = str_replace('\\', '/', dirname($scriptName));
         if ($basePath === '.' || $basePath === '/') {
@@ -77,6 +82,23 @@ abstract class BaseController
         }
 
         return rtrim($basePath, '/');
+    }
+
+    private function configuredBasePath(): ?string
+    {
+        $config = $this->services['config'] ?? [];
+        $raw = $config['app']['base_path'] ?? null;
+        if (!is_string($raw)) {
+            return null;
+        }
+
+        $raw = trim($raw);
+        if ($raw === '') {
+            return '';
+        }
+
+        $normalized = '/' . trim($raw, '/');
+        return $normalized === '/' ? '' : $normalized;
     }
 
     protected function db(): Database

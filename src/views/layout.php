@@ -35,7 +35,7 @@ if ($flashType === 'error') {
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-3">
     <div class="container-fluid">
         <a class="navbar-brand" href="<?= htmlspecialchars($brandHref, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($appName, ENT_QUOTES, 'UTF-8') ?></a>
-        <div id="js-header-clock" class="text-light small fw-semibold mx-auto" aria-label="Current time">--:--</div>
+        <div id="js-header-clock" class="text-light small fw-semibold mx-auto pe-none" aria-label="Current time">--:--</div>
         <div class="d-flex align-items-center gap-2 ms-auto">
             <?php if (is_array($currentSuperadmin ?? null)): ?>
                 <span class="text-light small"><?= htmlspecialchars((string) $currentSuperadmin['username'], ENT_QUOTES, 'UTF-8') ?></span>

@@ -287,7 +287,7 @@ final class PublicViewController extends BaseController
      */
     private function renderPublic(string $view, array $data): void
     {
-        $viewFile = __DIR__ . '/../views/' . $view . '.php';
+        $viewFile = __DIR__ . '/../Views/' . $view . '.php';
         if (!is_file($viewFile)) {
             throw new \RuntimeException(sprintf('View "%s" not found.', $view));
         }
@@ -295,7 +295,7 @@ final class PublicViewController extends BaseController
         $config = $this->services['config'] ?? [];
         $url = fn (string $path = '/'): string => $this->url($path);
         extract($data, EXTR_SKIP);
-        require __DIR__ . '/../views/public/layout.php';
+        require __DIR__ . '/../Views/public/layout.php';
     }
 
     private function absoluteCurrentUrl(): string
