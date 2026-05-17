@@ -38,18 +38,6 @@ $courtBadgeClasses = [
     'text-bg-dark',
 ];
 ?>
-<style>
-    .match-winner-name {
-        font-weight: 600;
-        color: #3a7f5a;
-    }
-
-    .match-winner-badge {
-        font-size: 0.65rem;
-        font-weight: 500;
-        line-height: 1;
-    }
-</style>
 <div class="card shadow-sm mb-3">
     <div class="card-body">
         <p class="text-muted small mb-2">

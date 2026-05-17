@@ -1731,6 +1731,10 @@ final class TournamentController extends BaseController
         $publicViewEnabled = $this->requestPostString('public_view_enabled') === '1';
         $autoplayEnabled = $this->requestPostString('autoplay_enabled') === '1';
         $rotationIntervalSeconds = (int) $this->requestPostString('rotation_interval_seconds');
+        $publicViewTheme = $this->requestPostString('public_view_theme');
+        if (!in_array($publicViewTheme, ['dark', 'light'], true)) {
+            $publicViewTheme = 'dark';
+        }
         if ($rotationIntervalSeconds < 5 || $rotationIntervalSeconds > 300) {
             $this->setFlash('error', 'Rotation interval must be between 5 and 300 seconds.');
             $this->redirect($redirectPath);
@@ -1798,6 +1802,7 @@ final class TournamentController extends BaseController
                 $publicViewEnabled,
                 $autoplayEnabled,
                 $rotationIntervalSeconds,
+                $publicViewTheme,
                 $publicTitleOverride,
                 $publicDescription,
                 $logoPath,

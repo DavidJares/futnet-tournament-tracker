@@ -24,7 +24,7 @@ final class TournamentModel
         $statement = $pdo->query(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
                     match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode,
-                    public_view_enabled, autoplay_enabled, rotation_interval_seconds,
+                    public_view_enabled, autoplay_enabled, rotation_interval_seconds, public_view_theme,
                     public_title_override, public_description, public_logo_path, public_map_url, public_map_embed_url,
                     created_at
              FROM tournaments
@@ -142,7 +142,7 @@ final class TournamentModel
         $statement = $pdo->prepare(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
                     match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode,
-                    public_view_enabled, autoplay_enabled, rotation_interval_seconds,
+                    public_view_enabled, autoplay_enabled, rotation_interval_seconds, public_view_theme,
                     public_title_override, public_description, public_logo_path, public_map_url, public_map_embed_url,
                     created_at, updated_at
              FROM tournaments
@@ -164,7 +164,7 @@ final class TournamentModel
         $statement = $pdo->prepare(
             'SELECT id, name, slug, event_date, start_time, location, number_of_groups, number_of_courts,
                     match_duration_minutes, advancing_teams_count, group_stage_mode, knockout_mode, match_mode,
-                    public_view_enabled, autoplay_enabled, rotation_interval_seconds,
+                    public_view_enabled, autoplay_enabled, rotation_interval_seconds, public_view_theme,
                     public_title_override, public_description, public_logo_path, public_map_url, public_map_embed_url,
                     created_at, updated_at
              FROM tournaments
@@ -372,6 +372,7 @@ final class TournamentModel
         bool $publicViewEnabled,
         bool $autoplayEnabled,
         int $rotationIntervalSeconds,
+        string $publicViewTheme,
         string $publicTitleOverride,
         string $publicDescription,
         string $publicLogoPath,
@@ -388,6 +389,7 @@ final class TournamentModel
                  SET public_view_enabled = :public_view_enabled,
                      autoplay_enabled = :autoplay_enabled,
                      rotation_interval_seconds = :rotation_interval_seconds,
+                     public_view_theme = :public_view_theme,
                      public_title_override = :public_title_override,
                      public_description = :public_description,
                      public_logo_path = :public_logo_path,
@@ -400,6 +402,7 @@ final class TournamentModel
                 'public_view_enabled' => $publicViewEnabled ? 1 : 0,
                 'autoplay_enabled' => $autoplayEnabled ? 1 : 0,
                 'rotation_interval_seconds' => $rotationIntervalSeconds,
+                'public_view_theme' => self::normalizeTheme($publicViewTheme),
                 'public_title_override' => $this->nullIfEmpty($publicTitleOverride),
                 'public_description' => $this->nullIfEmpty($publicDescription),
                 'public_logo_path' => $this->nullIfEmpty($publicLogoPath),
@@ -565,6 +568,11 @@ final class TournamentModel
     private function nullIfEmpty(string $value): ?string
     {
         return $value === '' ? null : $value;
+    }
+
+    private static function normalizeTheme(string $theme): string
+    {
+        return $theme === 'light' ? 'light' : 'dark';
     }
 
     /**

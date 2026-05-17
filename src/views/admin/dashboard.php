@@ -9,8 +9,11 @@ $modeLabels = [
     'best_of_3' => 'Best of 3',
 ];
 ?>
-<div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="h4 m-0">Tournaments</h1>
+<div class="bb-page-header">
+    <div>
+        <div class="bb-page-kicker">Superadmin</div>
+        <h1>Tournaments</h1>
+    </div>
 </div>
 
 <div class="row g-3">

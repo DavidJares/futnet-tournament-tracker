@@ -106,3 +106,12 @@ BracketBird is an MVP with working:
 - public display pages
 
 The project is designed for incremental extension without introducing framework or build-tool complexity.
+
+## UI Foundation
+
+BracketBird includes a shared visual layer at `public/assets/css/bracketbird.css`.
+It sits on top of Bootstrap CDN styles and provides the dark sports-product theme, admin shell, responsive navigation, themed cards, forms, tables, badges, match/bracket cards, flash messages, and public display styling.
+No frontend build pipeline is required.
+
+Admin pages support a browser-local dark/light theme preference stored in `localStorage`.
+Public screens use the tournament-specific `public_view_theme` setting so a tournament can choose either the dark broadcast theme or a lighter outdoor-friendly theme independently from the admin UI.

@@ -57,7 +57,7 @@ final class PublicViewController extends BaseController
         }
 
         if (!(bool) ($context['tournament']['public_view_enabled'] ?? false)) {
-            $this->renderPublicUnavailable((string) ($context['tournament']['name'] ?? 'Tournament'));
+            $this->renderPublicUnavailable((string) ($context['tournament']['name'] ?? 'Tournament'), $context['tournament']);
             return;
         }
 
@@ -95,7 +95,7 @@ final class PublicViewController extends BaseController
         }
 
         if (!(bool) ($context['tournament']['public_view_enabled'] ?? false)) {
-            $this->renderPublicUnavailable((string) ($context['tournament']['name'] ?? 'Tournament'));
+            $this->renderPublicUnavailable((string) ($context['tournament']['name'] ?? 'Tournament'), $context['tournament']);
             return;
         }
 
@@ -131,6 +131,8 @@ final class PublicViewController extends BaseController
         $tournament['public_view_enabled'] = (int) ($tournament['public_view_enabled'] ?? 0) > 0;
         $tournament['autoplay_enabled'] = (int) ($tournament['autoplay_enabled'] ?? 1) > 0;
         $tournament['rotation_interval_seconds'] = (int) ($tournament['rotation_interval_seconds'] ?? 15);
+        $publicViewTheme = (string) ($tournament['public_view_theme'] ?? 'dark');
+        $tournament['public_view_theme'] = $publicViewTheme === 'light' ? 'light' : 'dark';
         $groups = $tournamentModel->groupsForTournament((int) $tournament['id']);
         $teamModel = new TeamModel($this->db());
         $teams = $teamModel->allByTournament((int) $tournament['id']);
@@ -274,11 +276,15 @@ final class PublicViewController extends BaseController
         return $enabled;
     }
 
-    private function renderPublicUnavailable(string $tournamentName): void
+    /**
+     * @param array<string, mixed> $tournament
+     */
+    private function renderPublicUnavailable(string $tournamentName, array $tournament = []): void
     {
         $this->renderPublic('public/unavailable', [
             'title' => $tournamentName . ' - Public View Unavailable',
             'tournamentName' => $tournamentName,
+            'tournament' => $tournament,
         ]);
     }
 

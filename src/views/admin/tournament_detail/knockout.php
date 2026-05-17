@@ -128,76 +128,6 @@ $bracketViewUrl = $currentPath . '?' . http_build_query($bracketViewQuery);
         <?php if (count($knockoutMatches) === 0): ?>
             <p class="text-muted p-3 mb-0">No knockout matches generated yet.</p>
         <?php elseif ($knockoutView === 'bracket'): ?>
-            <style>
-                .kb-wrap {
-                    overflow-x: auto;
-                    padding: 1rem;
-                }
-                .kb-grid {
-                    display: flex;
-                    gap: 1rem;
-                    align-items: flex-start;
-                    min-width: max-content;
-                }
-                .kb-round {
-                    width: 290px;
-                    flex: 0 0 290px;
-                }
-                .kb-round-title {
-                    font-size: 0.9rem;
-                    font-weight: 700;
-                    text-transform: uppercase;
-                    color: #6c757d;
-                    margin-bottom: 0.5rem;
-                }
-                .kb-match-card {
-                    border: 1px solid #dee2e6;
-                    border-radius: 0.5rem;
-                    background: #fff;
-                    padding: 0.6rem 0.7rem;
-                    margin-bottom: 0.8rem;
-                }
-                .kb-match-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    margin-bottom: 0.35rem;
-                }
-                .kb-match-label {
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                }
-                .kb-team-row {
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: 0.5rem;
-                    font-size: 0.93rem;
-                    margin-bottom: 0.2rem;
-                }
-                .kb-team-name-win {
-                    color: #3a7f5a;
-                    font-weight: 600;
-                }
-                .kb-source {
-                    color: #6c757d;
-                    font-size: 0.78rem;
-                }
-                .kb-result {
-                    margin-top: 0.35rem;
-                    font-size: 0.85rem;
-                    font-weight: 600;
-                }
-                .kb-meta {
-                    margin-top: 0.4rem;
-                    display: flex;
-                    flex-wrap: wrap;
-                    align-items: center;
-                    gap: 0.45rem 0.6rem;
-                    font-size: 0.78rem;
-                    color: #6c757d;
-                }
-            </style>
             <div class="kb-wrap">
                 <div class="kb-grid">
                     <?php foreach ($rounds as $roundName => $roundMatches): ?>
@@ -293,22 +223,6 @@ $bracketViewUrl = $currentPath . '?' . http_build_query($bracketViewQuery);
                 });
             </script>
         <?php else: ?>
-            <style>
-                .ko-team-winner {
-                    font-weight: 600;
-                    color: #3a7f5a;
-                }
-                .ko-source-label {
-                    color: #6c757d;
-                    font-size: 0.8rem;
-                    line-height: 1.15;
-                }
-                .ko-result-detail {
-                    color: #6c757d;
-                    font-size: 0.8rem;
-                    line-height: 1.15;
-                }
-            </style>
             <div class="table-responsive">
                 <table class="table table-sm table-striped mb-0 align-middle">
                     <thead>

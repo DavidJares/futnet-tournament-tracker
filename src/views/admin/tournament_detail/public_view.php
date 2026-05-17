@@ -18,6 +18,10 @@ $tournamentId = (int) ($tournament['id'] ?? 0);
 $publicViewEnabled = (int) ($tournament['public_view_enabled'] ?? 0) > 0;
 $autoplayEnabled = (int) ($tournament['autoplay_enabled'] ?? 1) > 0;
 $rotationIntervalSeconds = (int) ($tournament['rotation_interval_seconds'] ?? 15);
+$publicViewTheme = (string) ($tournament['public_view_theme'] ?? 'dark');
+if (!in_array($publicViewTheme, ['dark', 'light'], true)) {
+    $publicViewTheme = 'dark';
+}
 $publicTitleOverride = (string) ($tournament['public_title_override'] ?? '');
 $publicDescription = (string) ($tournament['public_description'] ?? '');
 $publicLogoPath = trim((string) ($tournament['public_logo_path'] ?? ''));
@@ -50,6 +54,13 @@ $screenHelpText = [
             <div class="mb-3 col-12 col-md-4 ps-0">
                 <label for="rotation_interval_seconds" class="form-label">Rotation interval (seconds)</label>
                 <input type="number" class="form-control" name="rotation_interval_seconds" id="rotation_interval_seconds" min="5" max="300" value="<?= $rotationIntervalSeconds ?>" required>
+            </div>
+            <div class="mb-3 col-12 col-md-4 ps-0">
+                <label for="public_view_theme" class="form-label">Public View theme</label>
+                <select class="form-select" name="public_view_theme" id="public_view_theme" required>
+                    <option value="dark" <?= $publicViewTheme === 'dark' ? 'selected' : '' ?>>Dark broadcast</option>
+                    <option value="light" <?= $publicViewTheme === 'light' ? 'selected' : '' ?>>Light outdoor</option>
+                </select>
             </div>
             <div class="mb-2">
                 <label for="public_title_override" class="form-label">Public title override (optional)</label>
@@ -94,6 +105,7 @@ $screenHelpText = [
         <input type="hidden" name="public_view_enabled" value="<?= $publicViewEnabled ? '1' : '0' ?>">
         <input type="hidden" name="autoplay_enabled" value="<?= $autoplayEnabled ? '1' : '0' ?>">
         <input type="hidden" name="rotation_interval_seconds" value="<?= $rotationIntervalSeconds ?>">
+        <input type="hidden" name="public_view_theme" value="<?= htmlspecialchars($publicViewTheme, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="public_title_override" value="<?= htmlspecialchars($publicTitleOverride, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="public_description" value="<?= htmlspecialchars($publicDescription, ENT_QUOTES, 'UTF-8') ?>">
         <input type="hidden" name="public_map_url" value="<?= htmlspecialchars($publicMapUrl, ENT_QUOTES, 'UTF-8') ?>">
