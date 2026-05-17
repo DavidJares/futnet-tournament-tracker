@@ -986,17 +986,375 @@ code {
 
 .bb-public-main {
     min-height: 100vh;
-    padding: 1rem;
+    padding: clamp(0.75rem, 2vw, 1.5rem);
 }
 
 .bb-public-display {
     min-height: calc(100vh - 2rem);
 }
 
+.bb-public-shell {
+    display: grid;
+    gap: clamp(1rem, 2vw, 1.5rem);
+    width: min(100%, 1680px);
+    margin: 0 auto;
+}
+
+.bb-public-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    padding: clamp(1rem, 2vw, 1.35rem);
+    border: 1px solid rgba(88, 66, 55, 0.72);
+    border-radius: 14px;
+    background:
+        linear-gradient(135deg, rgba(249, 115, 22, 0.14), transparent 34%),
+        var(--bb-surface);
+    box-shadow: var(--bb-shadow);
+}
+
+.bb-public-header > div:first-child {
+    min-width: 0;
+}
+
+.bb-public-kicker {
+    color: var(--bb-primary-soft);
+    font-size: clamp(0.74rem, 1.1vw, 0.9rem);
+    font-weight: 850;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
 .public-title {
     color: #fff;
-    font-size: clamp(1.35rem, 2.8vw, 2.4rem);
+    margin: 0;
+    font-size: clamp(2rem, 4vw, 4rem);
+    line-height: 0.98;
     font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-meta-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.7rem;
+    color: var(--bb-muted);
+    font-size: clamp(0.95rem, 1.6vw, 1.2rem);
+    font-weight: 700;
+}
+
+.bb-public-meta-line span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.bb-public-meta-line span + span::before {
+    width: 0.38rem;
+    height: 0.38rem;
+    border-radius: 999px;
+    background: var(--bb-primary);
+    content: "";
+}
+
+.bb-public-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    padding-bottom: 0.1rem;
+}
+
+.bb-public-nav-link {
+    flex: 0 1 auto;
+    padding: 0.55rem 0.8rem;
+    border: 1px solid rgba(218, 226, 253, 0.18);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--bb-text);
+    font-size: 0.88rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.bb-public-nav-link:hover,
+.bb-public-nav-link.active {
+    border-color: rgba(249, 115, 22, 0.58);
+    background: rgba(249, 115, 22, 0.16);
+    color: #fff;
+}
+
+.bb-public-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+    gap: clamp(1rem, 2vw, 1.5rem);
+    align-items: stretch;
+    min-height: min(720px, calc(100vh - 13rem));
+}
+
+.bb-public-hero-copy,
+.bb-public-hero-side,
+.bb-public-map,
+.bb-public-empty,
+.bb-public-match-card,
+.bb-public-standings-card,
+.bb-public-feed-item,
+.bb-public-result-item,
+.bb-public-bracket-card {
+    border: 1px solid rgba(88, 66, 55, 0.72);
+    border-radius: 14px;
+    background: var(--bb-surface);
+    color: var(--bb-text);
+    box-shadow: var(--bb-shadow);
+}
+
+.bb-public-hero-copy {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 1.3rem;
+    padding: clamp(1.3rem, 3.5vw, 3rem);
+    background:
+        radial-gradient(circle at 92% 12%, rgba(249, 115, 22, 0.2), transparent 18rem),
+        linear-gradient(135deg, var(--bb-surface-high), var(--bb-surface));
+}
+
+.bb-public-hero-copy h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(2.5rem, 6vw, 6.6rem);
+    font-weight: 900;
+    line-height: 0.95;
+}
+
+.bb-public-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.bb-public-stat {
+    padding: 0.8rem;
+    border: 1px solid rgba(88, 66, 55, 0.62);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.bb-public-stat span,
+.bb-public-description span,
+.bb-public-section-heading span,
+.bb-public-result-stage {
+    display: block;
+    color: var(--bb-muted);
+    font-size: 0.75rem;
+    font-weight: 850;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.bb-public-stat strong {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--bb-text);
+    font-size: clamp(1.05rem, 2vw, 1.45rem);
+}
+
+.bb-public-description {
+    max-width: 72rem;
+    padding: 1rem;
+    border: 1px solid rgba(88, 66, 55, 0.62);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.bb-public-description p {
+    margin: 0.35rem 0 0;
+    font-size: clamp(1.05rem, 2vw, 1.45rem);
+    line-height: 1.45;
+}
+
+.bb-public-hero-side {
+    display: grid;
+    align-content: center;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.bb-public-logo-panel {
+    display: grid;
+    min-height: 220px;
+    place-items: center;
+    padding: 1rem;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.bb-public-logo-panel img {
+    max-width: 100%;
+    max-height: 280px;
+    object-fit: contain;
+}
+
+.bb-public-map {
+    overflow: hidden;
+}
+
+.bb-public-map iframe {
+    display: block;
+}
+
+.bb-public-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bb-public-section-heading strong {
+    display: block;
+    color: #fff;
+    font-size: clamp(1.55rem, 3vw, 2.6rem);
+    font-weight: 900;
+}
+
+.bb-public-empty {
+    padding: clamp(1rem, 2vw, 1.5rem);
+    color: var(--bb-muted);
+    font-size: clamp(1rem, 2vw, 1.4rem);
+    font-weight: 800;
+}
+
+.bb-public-live-grid,
+.bb-public-match-grid,
+.bb-public-standings-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.bb-public-live-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr));
+}
+
+.bb-public-match-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 390px), 1fr));
+}
+
+.bb-public-standings-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 560px), 1fr));
+}
+
+.bb-public-match-card {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+    padding: 1rem;
+}
+
+.bb-public-live-card {
+    min-height: 240px;
+    border-color: rgba(238, 194, 0, 0.42);
+    background:
+        linear-gradient(135deg, rgba(238, 194, 0, 0.12), transparent 48%),
+        var(--bb-surface-high);
+}
+
+.bb-public-match-top,
+.bb-public-match-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.bb-public-match-top {
+    color: var(--bb-muted);
+    font-size: 0.86rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.bb-public-versus {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(6rem, 12vw, 9.5rem) minmax(0, 1fr);
+    gap: 0.9rem;
+    align-items: center;
+}
+
+.bb-public-team {
+    display: grid;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--bb-text);
+    font-size: clamp(1.25rem, 3vw, 2.2rem);
+    font-weight: 900;
+    line-height: 1.05;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-team:last-child {
+    text-align: right;
+}
+
+.bb-public-score {
+    min-width: 0;
+    padding: 0.35rem 0.6rem;
+    border-radius: 12px;
+    background: rgba(249, 115, 22, 0.16);
+    color: var(--bb-primary-soft);
+    font-size: clamp(1.8rem, 4vw, 3.4rem);
+    font-weight: 950;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.bb-public-winner {
+    justify-self: start;
+    width: fit-content;
+    padding: 0.16rem 0.45rem;
+    border-radius: 999px;
+    background: rgba(34, 197, 94, 0.16);
+    color: var(--bb-success);
+    font-size: 0.8rem;
+    font-weight: 950;
+}
+
+.bb-public-team:last-child .bb-public-winner {
+    justify-self: end;
+}
+
+.bb-public-match-teams {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(4.2rem, 8vw, 6rem) minmax(0, 1fr);
+    gap: 0.65rem;
+    align-items: center;
+    color: var(--bb-text);
+    font-size: clamp(1rem, 2vw, 1.35rem);
+}
+
+.bb-public-match-teams strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-match-teams strong:last-child {
+    text-align: right;
+}
+
+.bb-public-match-teams span {
+    min-width: 0;
+    color: var(--bb-primary-soft);
+    font-weight: 950;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.bb-public-match-meta {
+    flex-wrap: wrap;
+    color: var(--bb-muted);
+    font-size: 0.9rem;
+    font-weight: 800;
 }
 
 .public-subtitle {
@@ -1030,10 +1388,12 @@ code {
 
 .public-standings {
     table-layout: fixed;
+    width: 100%;
 }
 
 .public-standings th,
 .public-standings td {
+    min-width: 0;
     text-align: center;
 }
 
@@ -1041,20 +1401,331 @@ code {
 .public-standings td.col-team {
     width: auto;
     text-align: left;
+    overflow-wrap: anywhere;
 }
 
 .public-standings th.col-rank,
 .public-standings td.col-rank {
-    width: 44px;
+    width: clamp(2.55rem, 5vw, 3rem);
 }
 
 .public-standings th.col-num,
 .public-standings td.col-num {
-    width: 58px;
+    width: clamp(2.85rem, 6vw, 3.7rem);
+}
+
+.bb-public-standings-card {
+    min-width: 0;
+    overflow: hidden;
+}
+
+.bb-public-card-title {
+    padding: 1rem 1rem 0.65rem;
+    color: #fff;
+    font-size: clamp(1.25rem, 2vw, 1.7rem);
+    font-weight: 900;
+}
+
+.public-standings .col-rank span {
+    display: inline-grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--bb-surface-highest);
+    font-weight: 950;
+}
+
+.bb-public-advancing-row {
+    background: rgba(34, 197, 94, 0.09) !important;
+}
+
+.bb-public-points {
+    color: var(--bb-primary-soft) !important;
+    font-size: 1.1em;
+    font-weight: 950;
+}
+
+.bb-public-feed {
+    display: grid;
+    gap: 0.8rem;
+}
+
+.bb-public-feed-item,
+.bb-public-result-item {
+    display: grid;
+    grid-template-columns: 5.5rem minmax(0, 1fr) auto;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.95rem 1rem;
+}
+
+.bb-public-feed-item > *,
+.bb-public-result-item > * {
+    min-width: 0;
+}
+
+.bb-public-feed-time {
+    color: var(--bb-primary-soft);
+    font-size: clamp(1.25rem, 2.5vw, 1.8rem);
+    font-weight: 950;
+}
+
+.bb-public-feed-main {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.bb-public-schedule-item {
+    grid-template-columns: clamp(4.5rem, 8vw, 6rem) minmax(0, 1.25fr) clamp(5.25rem, 9vw, 7rem) minmax(0, 1.25fr) minmax(7.5rem, 0.45fr);
+    grid-template-areas: "time team-a score team-b meta";
+    align-items: center;
+}
+
+.bb-public-schedule-item .bb-public-feed-time {
+    grid-area: time;
+}
+
+.bb-public-schedule-team {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    color: var(--bb-text);
+    font-size: clamp(1.02rem, 1.8vw, 1.45rem);
+    line-height: 1.12;
+}
+
+.bb-public-schedule-team strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-schedule-team-a {
+    grid-area: team-a;
+}
+
+.bb-public-schedule-team-b {
+    grid-area: team-b;
+    justify-content: flex-end;
+    text-align: right;
+}
+
+.bb-public-schedule-score {
+    grid-area: score;
+    display: grid;
+    gap: 0.16rem;
+    justify-items: center;
+    min-width: 0;
+    padding: 0.25rem 0.45rem;
+    border-radius: 12px;
+    background: rgba(249, 115, 22, 0.12);
+    text-align: center;
+}
+
+.bb-public-schedule-score strong {
+    color: var(--bb-primary-soft);
+    font-size: clamp(1.25rem, 2.2vw, 1.9rem);
+    font-weight: 950;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.bb-public-schedule-score .public-result-sub {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    font-size: clamp(0.72rem, 1.1vw, 0.86rem);
+    line-height: 1.15;
+}
+
+.bb-public-schedule-meta {
+    grid-area: meta;
+    display: grid;
+    justify-items: end;
+    gap: 0.35rem;
+    min-width: 0;
+}
+
+.bb-public-schedule-meta .badge {
+    width: fit-content;
+    max-width: 100%;
+    text-align: center;
+    white-space: normal;
+}
+
+.bb-public-schedule-group {
+    color: var(--bb-muted);
+    font-size: 0.78rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-align: right;
+    text-transform: uppercase;
+}
+
+.bb-public-bracket-wrap {
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+}
+
+.bb-public-bracket-grid {
+    display: flex;
+    gap: 1rem;
+    min-width: max-content;
+}
+
+.bb-public-bracket-round {
+    width: clamp(285px, 30vw, 340px);
+    flex: 0 0 clamp(285px, 30vw, 340px);
+}
+
+.bb-public-bracket-round-title {
+    margin-bottom: 0.7rem;
+    color: var(--bb-primary-soft);
+    font-size: 0.9rem;
+    font-weight: 950;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.bb-public-bracket-card {
+    position: relative;
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 0.85rem;
+    min-width: 0;
+    padding: 0.9rem;
+    background: var(--bb-surface-high);
+}
+
+.bb-public-bracket-card::before {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    border-radius: 14px 0 0 14px;
+    background: var(--bb-primary);
+    content: "";
+}
+
+.bb-public-bracket-card.is-pending {
+    opacity: 0.82;
+}
+
+.bb-public-bracket-team {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    min-width: 0;
+    color: var(--bb-text);
+    font-size: 1.05rem;
+    font-weight: 850;
+}
+
+.bb-public-bracket-team span:first-child {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-source {
+    color: var(--bb-muted);
+    font-size: 0.78rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-bracket-result {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    color: var(--bb-primary-soft);
+    font-size: 1.25rem;
+    font-weight: 950;
+}
+
+.bb-public-bracket-result span {
+    color: var(--bb-muted);
+    font-size: 0.82rem;
+}
+
+.bb-public-result-feed {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    max-width: 1180px;
+}
+
+.bb-public-result-item {
+    grid-template-columns: minmax(7rem, 0.55fr) minmax(0, 1.25fr) clamp(5.25rem, 9vw, 7rem) minmax(0, 1.25fr) minmax(7.5rem, 0.45fr);
+    grid-template-areas: "stage team-a score team-b badges";
+    align-items: center;
+}
+
+.bb-public-result-stage {
+    grid-area: stage;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.bb-public-result-team-a {
+    grid-area: team-a;
+}
+
+.bb-public-result-team-b {
+    grid-area: team-b;
+}
+
+.bb-public-result-score {
+    grid-area: score;
+}
+
+.bb-public-result-badges {
+    grid-area: badges;
+}
+
+.bb-public-result-item .bb-public-winner {
+    background: rgba(34, 197, 94, 0.2);
+}
+
+.bb-public-result-item .bb-public-schedule-score strong {
+    font-size: clamp(1.35rem, 2.5vw, 2.1rem);
 }
 
 .qr-box {
-    max-width: 180px;
+    max-width: 220px;
+}
+
+.bb-public-qr {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.75rem;
+    border: 1px solid rgba(88, 66, 55, 0.72);
+    border-radius: 14px;
+    background: var(--bb-surface);
+    box-shadow: var(--bb-shadow);
+}
+
+.bb-public-qr-image {
+    display: grid;
+    place-items: center;
+    padding: 0.5rem;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.bb-public-qr-copy {
+    min-width: 0;
+    color: var(--bb-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.bb-public-qr-copy a {
+    display: block;
+    overflow: hidden;
+    color: var(--bb-primary-soft);
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .img-thumbnail {
@@ -1098,6 +1769,51 @@ code {
 
 .bb-theme-light .public-table thead th {
     color: var(--bb-primary-soft);
+}
+
+.bb-theme-light .bb-public-header,
+.bb-theme-light .bb-public-hero-copy,
+.bb-theme-light .bb-public-hero-side,
+.bb-theme-light .bb-public-map,
+.bb-theme-light .bb-public-empty,
+.bb-theme-light .bb-public-match-card,
+.bb-theme-light .bb-public-standings-card,
+.bb-theme-light .bb-public-feed-item,
+.bb-theme-light .bb-public-result-item,
+.bb-theme-light .bb-public-bracket-card,
+.bb-theme-light .bb-public-qr {
+    border-color: var(--bb-border);
+    background: var(--bb-surface);
+}
+
+.bb-theme-light .bb-public-hero-copy {
+    background:
+        radial-gradient(circle at 92% 12%, rgba(249, 115, 22, 0.16), transparent 18rem),
+        linear-gradient(135deg, #fff, #f8fafc);
+}
+
+.bb-theme-light .bb-public-hero-copy h2,
+.bb-theme-light .bb-public-section-heading strong,
+.bb-theme-light .bb-public-card-title {
+    color: var(--bb-text);
+}
+
+.bb-theme-light .bb-public-nav-link {
+    border-color: var(--bb-border);
+    background: rgba(255, 255, 255, 0.68);
+    color: var(--bb-text);
+}
+
+.bb-theme-light .bb-public-nav-link:hover,
+.bb-theme-light .bb-public-nav-link.active {
+    background: #ffedd5;
+    color: #7c2d12;
+}
+
+.bb-theme-light .bb-public-stat,
+.bb-theme-light .bb-public-description {
+    border-color: var(--bb-border);
+    background: #fff;
 }
 
 .bb-theme-light .bb-brand:hover,
@@ -1307,6 +2023,71 @@ code {
     .bb-mobile-section-tabs .nav-link {
         white-space: nowrap;
     }
+
+    .bb-public-header,
+    .bb-public-hero,
+    .bb-public-versus,
+    .bb-public-feed-item {
+        grid-template-columns: 1fr;
+    }
+
+    .bb-public-header {
+        display: grid;
+    }
+
+    .bb-public-header .bb-public-qr {
+        max-width: min(100%, 260px);
+    }
+
+    .bb-public-hero {
+        min-height: 0;
+    }
+
+    .bb-public-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .bb-public-team,
+    .bb-public-team:last-child,
+    .bb-public-match-teams strong:last-child {
+        text-align: left;
+    }
+
+    .bb-public-score {
+        width: fit-content;
+        min-width: min(100%, 7rem);
+    }
+
+    .bb-public-result-item {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "stage badges"
+            "team-a team-b"
+            "score score";
+    }
+
+    .bb-public-result-score {
+        justify-self: center;
+        width: min(100%, 18rem);
+    }
+
+    .bb-public-schedule-item {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "time meta"
+            "team-a team-b"
+            "score score";
+        align-items: start;
+    }
+
+    .bb-public-schedule-item .bb-public-feed-time {
+        align-self: center;
+    }
+
+    .bb-public-schedule-score {
+        justify-self: center;
+        width: min(100%, 18rem);
+    }
 }
 
 @media (max-width: 575.98px) {
@@ -1321,5 +2102,137 @@ code {
 
     .table {
         font-size: 0.9rem;
+    }
+
+    .bb-public-stat-grid,
+    .bb-public-match-teams {
+        grid-template-columns: 1fr;
+    }
+
+    .bb-public-main {
+        padding: 0.65rem;
+    }
+
+    .bb-public-nav-link {
+        flex: 1 1 auto;
+        text-align: center;
+    }
+
+    .bb-public-match-top,
+    .bb-public-match-meta {
+        align-items: flex-start;
+    }
+
+    .bb-public-match-teams span {
+        width: fit-content;
+        max-width: 100%;
+        justify-self: start;
+    }
+
+    .bb-public-result-item {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "stage"
+            "badges"
+            "team-a"
+            "team-b"
+            "score";
+    }
+
+    .bb-public-result-badges {
+        justify-items: start;
+    }
+
+    .bb-public-result-score {
+        justify-self: stretch;
+        width: auto;
+    }
+
+    .bb-public-schedule-item {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "time"
+            "meta"
+            "team-a"
+            "team-b"
+            "score";
+    }
+
+    .bb-public-schedule-team-b {
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    .bb-public-schedule-meta {
+        justify-items: start;
+    }
+
+    .bb-public-schedule-group {
+        text-align: left;
+    }
+
+    .bb-public-schedule-score {
+        justify-self: stretch;
+        width: auto;
+    }
+
+    .bb-public-meta-line span + span::before {
+        display: none;
+    }
+}
+
+@media (max-width: 700px) {
+    .bb-public-standings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .bb-public-card-title {
+        padding: 0.85rem 0.75rem 0.5rem;
+    }
+
+    .public-table {
+        font-size: clamp(0.78rem, 2.6vw, 0.95rem);
+    }
+
+    .public-table th,
+    .public-table td {
+        padding: 0.42rem 0.28rem;
+    }
+
+    .public-standings th.col-rank,
+    .public-standings td.col-rank {
+        width: 2.35rem;
+    }
+
+    .public-standings th.col-num,
+    .public-standings td.col-num {
+        width: 2.55rem;
+    }
+
+    .public-standings .col-rank span {
+        width: 1.65rem;
+        height: 1.65rem;
+    }
+}
+
+@media (max-width: 430px) {
+    .public-table {
+        font-size: 0.72rem;
+    }
+
+    .public-table th,
+    .public-table td {
+        padding-right: 0.18rem;
+        padding-left: 0.18rem;
+    }
+
+    .public-standings th.col-rank,
+    .public-standings td.col-rank {
+        width: 2rem;
+    }
+
+    .public-standings th.col-num,
+    .public-standings td.col-num {
+        width: 2.2rem;
     }
 }
