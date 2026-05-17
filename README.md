@@ -30,6 +30,7 @@ BracketBird is built for small and medium local tournaments that need a practica
 1. Copy local config:
    - `src/Config/local.example.php` -> `src/Config/local.php`
 2. Fill DB credentials in `src/Config/local.php`.
+   - Public "Now" labels use the viewer browser timezone when JavaScript is available. `app.timezone` or `APP_TIMEZONE` is only an optional server fallback.
 3. Run migrations:
    - `php scripts/migrate.php`
 4. Configure web root to `public/`.

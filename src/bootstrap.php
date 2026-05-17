@@ -37,6 +37,14 @@ spl_autoload_register(static function (string $class): void {
 });
 
 $config = Config::load(__DIR__ . '/Config');
+$timezone = $config['app']['timezone'] ?? null;
+if (is_string($timezone) && trim($timezone) !== '') {
+    try {
+        date_default_timezone_set((new DateTimeZone(trim($timezone)))->getName());
+    } catch (Throwable) {
+        date_default_timezone_set('UTC');
+    }
+}
 
 return [
     'config' => $config,

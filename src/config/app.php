@@ -7,6 +7,7 @@ return [
         'name' => 'BracketBird',
         'env' => getenv('APP_ENV') ?: 'prod',
         'base_path' => getenv('APP_BASE_PATH') ?: null,
+        'timezone' => getenv('APP_TIMEZONE') ?: null,
     ],
     'db' => [
         'host' => getenv('DB_HOST') ?: '127.0.0.1',

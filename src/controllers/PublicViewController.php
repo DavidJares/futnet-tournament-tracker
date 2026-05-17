@@ -188,7 +188,8 @@ final class PublicViewController extends BaseController
         $screenMeta = self::SCREEN_MAP[$screenKey] ?? self::SCREEN_MAP['overview'];
         $title = (string) ($screenMeta['title'] ?? 'Public');
         $enabledScreens = $this->enabledScreensOrdered($context['screens']);
-        $now = (new \DateTimeImmutable('now'))->format('Y-m-d H:i');
+        $nowDateTime = new \DateTimeImmutable('now', $this->appTimezone());
+        $now = $nowDateTime->format('Y-m-d H:i');
         $fullUrl = $this->absoluteCurrentUrl();
         $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=1&data=' . rawurlencode($fullUrl);
 
@@ -201,6 +202,7 @@ final class PublicViewController extends BaseController
             'enabledScreens' => $enabledScreens,
             'groups' => $context['groups'],
             'nowLabel' => $now,
+            'nowIso' => $nowDateTime->setTimezone(new \DateTimeZone('UTC'))->format(\DateTimeInterface::ATOM),
             'qrUrl' => $qrUrl,
             'currentUrl' => $fullUrl,
             'autoplay' => false,
@@ -310,6 +312,18 @@ final class PublicViewController extends BaseController
         $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
         $requestUri = (string) ($_SERVER['REQUEST_URI'] ?? '/');
         return $scheme . '://' . $host . $requestUri;
+    }
+
+    private function appTimezone(): \DateTimeZone
+    {
+        $config = $this->services['config'] ?? [];
+        $configured = is_array($config) ? ($config['app']['timezone'] ?? null) : null;
+        $timezone = is_string($configured) && trim($configured) !== '' ? trim($configured) : date_default_timezone_get();
+        try {
+            return new \DateTimeZone($timezone);
+        } catch (\Throwable) {
+            return new \DateTimeZone('UTC');
+        }
     }
 
     /**

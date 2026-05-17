@@ -6,6 +6,7 @@ declare(strict_types=1);
 /** @var string $screenTitle */
 /** @var string $screenKey */
 /** @var string $nowLabel */
+/** @var string $nowIso */
 /** @var string $qrUrl */
 /** @var string $currentUrl */
 /** @var bool $autoplay */
@@ -129,7 +130,7 @@ $advancingTeamsCount = max(0, (int) ($tournament['advancing_teams_count'] ?? 0))
                 <?php if (trim((string) ($tournament['location'] ?? '')) !== ''): ?>
                     <span><?= htmlspecialchars((string) $tournament['location'], ENT_QUOTES, 'UTF-8') ?></span>
                 <?php endif; ?>
-                <span>Now <?= htmlspecialchars($nowLabel, ENT_QUOTES, 'UTF-8') ?></span>
+                <span>Now <span data-bb-local-now="<?= htmlspecialchars($nowIso ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($nowLabel, ENT_QUOTES, 'UTF-8') ?></span></span>
             </div>
         </div>
         <?php if ($screenKey !== 'overview'): ?>
@@ -167,7 +168,7 @@ $advancingTeamsCount = max(0, (int) ($tournament['advancing_teams_count'] ?? 0))
                     <div class="bb-public-stat"><span>Date</span><strong><?= htmlspecialchars((string) ($tournament['event_date'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></strong></div>
                     <div class="bb-public-stat"><span>Start</span><strong><?= htmlspecialchars($startTime !== '' ? $startTime : '-', ENT_QUOTES, 'UTF-8') ?></strong></div>
                     <div class="bb-public-stat"><span>Location</span><strong><?= htmlspecialchars((string) ($tournament['location'] ?? '-'), ENT_QUOTES, 'UTF-8') ?></strong></div>
-                    <div class="bb-public-stat"><span>Current time</span><strong><?= htmlspecialchars($nowLabel, ENT_QUOTES, 'UTF-8') ?></strong></div>
+                    <div class="bb-public-stat"><span>Current time</span><strong data-bb-local-now="<?= htmlspecialchars($nowIso ?? '', ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($nowLabel, ENT_QUOTES, 'UTF-8') ?></strong></div>
                 </div>
                 <?php if ($overviewDescription !== ''): ?>
                     <div class="bb-public-description">
@@ -452,6 +453,32 @@ $advancingTeamsCount = max(0, (int) ($tournament['advancing_teams_count'] ?? 0))
         <?php endif; ?>
     <?php endif; ?>
 </section>
+
+<script>
+    (function () {
+        var nodes = document.querySelectorAll('[data-bb-local-now]');
+        if (!nodes.length || typeof Intl === 'undefined') {
+            return;
+        }
+        nodes.forEach(function (node) {
+            var value = node.getAttribute('data-bb-local-now');
+            if (!value) {
+                return;
+            }
+            var date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return;
+            }
+            node.textContent = new Intl.DateTimeFormat(undefined, {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            }).format(date);
+        });
+    }());
+</script>
 
 <?php if ($autoplay && $autoplay_seconds > 0 && $autoplay_next_url !== ''): ?>
     <script>
