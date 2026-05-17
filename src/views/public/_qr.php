@@ -5,7 +5,7 @@ declare(strict_types=1);
 /** @var string $qrUrl */
 /** @var string $currentUrl */
 ?>
-<div class="qr-box bb-public-qr">
+<div class="qr-box bb-public-qr bb-public-qr-desktop">
     <div class="bb-public-qr-image">
         <img src="<?= htmlspecialchars($qrUrl, ENT_QUOTES, 'UTF-8') ?>" alt="QR code for this screen" class="img-fluid">
     </div>
@@ -14,3 +14,12 @@ declare(strict_types=1);
         <a href="<?= htmlspecialchars($currentUrl, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($currentUrl, ENT_QUOTES, 'UTF-8') ?></a>
     </div>
 </div>
+<details class="bb-public-mobile-qr">
+    <summary>Show QR</summary>
+    <div class="bb-public-mobile-qr-panel">
+        <div class="bb-public-qr-image">
+            <img src="<?= htmlspecialchars($qrUrl, ENT_QUOTES, 'UTF-8') ?>" alt="QR code for this screen" class="img-fluid">
+        </div>
+        <a href="<?= htmlspecialchars($currentUrl, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($currentUrl, ENT_QUOTES, 'UTF-8') ?></a>
+    </div>
+</details>
