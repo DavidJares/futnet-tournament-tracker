@@ -116,3 +116,5 @@ No frontend build pipeline is required.
 
 Admin pages support a browser-local dark/light theme preference stored in `localStorage`.
 Public screens use the tournament-specific `public_view_theme` setting so a tournament can choose either the dark broadcast theme or a lighter outdoor-friendly theme independently from the admin UI.
+
+The Tournament Settings admin tab uses a responsive product-style configuration layout with themed cards for general information, tournament structure, match rules, access, and the save action bar while preserving the existing server-rendered form behavior.
