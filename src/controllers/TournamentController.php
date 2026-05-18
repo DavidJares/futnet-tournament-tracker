@@ -23,6 +23,14 @@ final class TournamentController extends BaseController
         'knockout' => ['label' => 'Knockout', 'path' => '/knockout'],
         'recent_results' => ['label' => 'Recent Results', 'path' => '/results'],
     ];
+    private const PUBLIC_SCREEN_DEFAULT_ORDER = [
+        'next_matches' => 1,
+        'group_schedule' => 2,
+        'standings' => 3,
+        'knockout' => 4,
+        'overview' => 5,
+        'recent_results' => 6,
+    ];
 
     public function detail(): void
     {
@@ -1959,24 +1967,35 @@ final class TournamentController extends BaseController
     private function buildPublicScreenSettingsViewData(TournamentModel $tournamentModel, int $tournamentId, string $tournamentSlug): array
     {
         $stored = [];
+        $storedOrderValues = [];
         foreach ($tournamentModel->publicScreensForTournament($tournamentId) as $row) {
             $screenKey = (string) ($row['screen_key'] ?? '');
             if ($screenKey === '') {
                 continue;
             }
 
+            $storedOrder = (int) ($row['sort_order'] ?? 1);
             $stored[$screenKey] = [
                 'is_enabled' => (int) ($row['is_enabled'] ?? 0),
-                'sort_order' => (int) ($row['sort_order'] ?? 1),
+                'sort_order' => $storedOrder,
             ];
+            $storedOrderValues[] = $storedOrder;
         }
+
+        $uniqueStoredOrders = array_values(array_unique($storedOrderValues));
+        $useDefaultDisplayOrder = count($stored) > 0
+            && count($uniqueStoredOrders) === 1
+            && (int) ($uniqueStoredOrders[0] ?? 0) === 1;
 
         $screens = [];
         foreach (self::PUBLIC_SCREEN_DEFINITIONS as $screenKey => $definition) {
             $path = (string) ($definition['path'] ?? '/overview');
             $settings = $stored[$screenKey] ?? null;
+            $defaultSortOrder = self::PUBLIC_SCREEN_DEFAULT_ORDER[$screenKey] ?? (count($screens) + 1);
             $isEnabled = is_array($settings) ? (int) ($settings['is_enabled'] ?? 0) : 1;
-            $sortOrder = is_array($settings) ? (int) ($settings['sort_order'] ?? 1) : (count($screens) + 1);
+            $sortOrder = is_array($settings)
+                ? ($useDefaultDisplayOrder ? $defaultSortOrder : (int) ($settings['sort_order'] ?? $defaultSortOrder))
+                : $defaultSortOrder;
 
             $screens[] = [
                 'key' => $screenKey,
@@ -1994,6 +2013,12 @@ final class TournamentController extends BaseController
                 $orderCompare = (int) $a['sort_order'] <=> (int) $b['sort_order'];
                 if ($orderCompare !== 0) {
                     return $orderCompare;
+                }
+
+                $defaultCompare = (self::PUBLIC_SCREEN_DEFAULT_ORDER[(string) ($a['key'] ?? '')] ?? 999)
+                    <=> (self::PUBLIC_SCREEN_DEFAULT_ORDER[(string) ($b['key'] ?? '')] ?? 999);
+                if ($defaultCompare !== 0) {
+                    return $defaultCompare;
                 }
 
                 return strcmp((string) $a['label'], (string) $b['label']);

@@ -10,7 +10,7 @@ declare(strict_types=1);
 
 $sectionLabels = [
     'tournament' => 'Tournament',
-    'groups' => 'Groups',
+    'groups' => 'Teams & Groups',
     'matches' => 'Group Stage',
     'knockout' => 'Knockout',
     'public_view' => 'Public View',

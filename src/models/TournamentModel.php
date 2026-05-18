@@ -582,11 +582,11 @@ final class TournamentModel
     private function normalizePublicScreens($raw): array
     {
         $defaults = [
-            'overview' => ['is_enabled' => 1, 'sort_order' => 1],
-            'next_matches' => ['is_enabled' => 1, 'sort_order' => 2],
+            'next_matches' => ['is_enabled' => 1, 'sort_order' => 1],
+            'group_schedule' => ['is_enabled' => 1, 'sort_order' => 2],
             'standings' => ['is_enabled' => 1, 'sort_order' => 3],
-            'group_schedule' => ['is_enabled' => 1, 'sort_order' => 4],
-            'knockout' => ['is_enabled' => 1, 'sort_order' => 5],
+            'knockout' => ['is_enabled' => 1, 'sort_order' => 4],
+            'overview' => ['is_enabled' => 1, 'sort_order' => 5],
             'recent_results' => ['is_enabled' => 1, 'sort_order' => 6],
         ];
 

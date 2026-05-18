@@ -118,3 +118,15 @@ Admin pages support a browser-local dark/light theme preference stored in `local
 Public screens use the tournament-specific `public_view_theme` setting so a tournament can choose either the dark broadcast theme or a lighter outdoor-friendly theme independently from the admin UI.
 
 The Tournament Settings admin tab uses a responsive product-style configuration layout with themed cards for general information, tournament structure, match rules, access, and the save action bar while preserving the existing server-rendered form behavior.
+
+The Teams & Groups admin area uses a responsive workspace layout with roster metrics, add-team controls, balanced assignment, unassigned-team handling, group cards, compact reassignment rows, and inline edit/delete actions while keeping the existing PHP form submissions.
+
+The Group Stage admin area uses a responsive match-management workspace with generation warnings, compact filters, a desktop match table, mobile match cards, start actions, winner treatment, and row/card detail navigation while preserving existing match generation and score-entry flows.
+
+The Match Detail admin area uses a responsive scorekeeping workspace with a match hero, status/control card, and structured set-entry panel while preserving the existing start, save, reset, and knockout progression flows.
+
+The Knockout admin area uses a responsive bracket-management workspace with generation warnings, themed table and bracket views, human-readable source labels, winner treatment, and match detail navigation while preserving existing knockout generation and progression behavior.
+
+The Superadmin Dashboard uses a responsive tournament overview with summary metrics, searchable compact tournament rows, copy actions, and a grouped create-tournament panel while preserving existing create, detail, and delete flows.
+
+The Public View admin area uses a responsive display-configuration workspace with display controls, overview content, branding/logo upload, and compact public-screen management while preserving existing public view and screen list save flows.
